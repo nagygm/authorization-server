@@ -1,0 +1,3 @@
+rootProject.name = 'authorization-server'
+includeBuild 'project-conventions'
+include ('server', 'oauth2')
