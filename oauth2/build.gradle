@@ -1,5 +1,5 @@
 plugins {
-    id 'authorization-server-module-conventions'
+    id 'hu.nagygm.authorization-server.kotlin-module-conventions'
 }
 
 group 'hu.nagygm'

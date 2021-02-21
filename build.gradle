@@ -1,17 +1,10 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version "$kotlin_version"
-    id 'org.jetbrains.kotlin.kapt' version "$kotlin_version"
-    id 'org.jetbrains.kotlin.plugin.serialization' version "$kotlin_version"
-    id 'org.springframework.boot' version "$spring_boot_version"
+//    id 'org.jetbrains.kotlin.jvm' version "$kotlin_version"
+//    id 'org.jetbrains.kotlin.kapt' version "$kotlin_version"
+//    id 'org.jetbrains.kotlin.plugin.serialization' version "$kotlin_version"
+//    id 'org.springframework.boot' version "$spring_boot_version"
     id "io.spring.dependency-management" version "1.0.11.RELEASE"
-    id 'jacoco'
-}
-
-sourceSets {
-    main.kotlin.srcDirs = ['src/main/kotlin']
-    test.kotlin.srcDirs = ['src/test/kotlin']
-    main.resources.srcDirs = ['src/main/resources']
-    test.resources.srcDirs = ['src/test/resources', 'src/main/db']
+//    id 'jacoco'
 }
 
 repositories {
@@ -28,43 +21,43 @@ allprojects {
     }
 }
 
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutines_version"
+//dependencies {
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+//    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutines_version"
+//
+//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${coroutines_version}")
+//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${coroutines_version}")
+//
+//    implementation "org.springframework.security:spring-security-config"
+//    implementation "org.springframework.security:spring-security-web"
+//    implementation "org.springframework.security:spring-security-oauth2-core"
+//    implementation "org.springframework.security:spring-security-oauth2-jose"
+//    implementation "org.springframework.security:spring-security-core"
+//
+//    implementation 'com.nimbusds:oauth2-oidc-sdk'
+//    implementation 'io.projectreactor:reactor-core'
+//    implementation 'org.springframework:spring-webflux'
+//
+//
+//    implementation 'com.nimbusds:nimbus-jose-jwt'
+//    implementation 'com.fasterxml.jackson.core:jackson-databind'
+//
+//    testCompile 'org.springframework.security:spring-security-test'
+//    testCompile 'junit:junit'
+//    testCompile 'org.assertj:assertj-core'
+//    testCompile 'org.mockito:mockito-core'
+//    testCompile 'com.jayway.jsonpath:json-path'
+//}
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${coroutines_version}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${coroutines_version}")
-
-    implementation "org.springframework.security:spring-security-config"
-    implementation "org.springframework.security:spring-security-web"
-    implementation "org.springframework.security:spring-security-oauth2-core"
-    implementation "org.springframework.security:spring-security-oauth2-jose"
-    implementation "org.springframework.security:spring-security-core"
-
-    implementation 'com.nimbusds:oauth2-oidc-sdk'
-    implementation 'io.projectreactor:reactor-core'
-    implementation 'org.springframework:spring-webflux'
-
-
-    implementation 'com.nimbusds:nimbus-jose-jwt'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-
-    testCompile 'org.springframework.security:spring-security-test'
-    testCompile 'junit:junit'
-    testCompile 'org.assertj:assertj-core'
-    testCompile 'org.mockito:mockito-core'
-    testCompile 'com.jayway.jsonpath:json-path'
-}
-
-jacoco {
-    toolVersion = "$jacoco_version"
-}
-
-test {
-    finalizedBy jacocoTestReport // report is always generated after tests run
-}
-jacocoTestReport {
-    dependsOn test // tests are required to run before generating the report
-}
+//jacoco {
+////    toolVersion = "$jacoco_version"
+////}
+//
+//test {
+//    finalizedBy jacocoTestReport // report is always generated after tests run
+//}
+//jacocoTestReport {
+//    dependsOn test // tests are required to run before generating the report
+//}
 
