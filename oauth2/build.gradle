@@ -6,5 +6,24 @@ group 'hu.nagygm'
 version'0.0.1'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:${project.ext.dep.coroutines}"
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${project.ext.dep.coroutines}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${project.ext.dep.coroutines}")
+
+    implementation 'org.springframework.security:spring-security-config'
+    implementation 'org.springframework.security:spring-security-web'
+    implementation 'org.springframework.security:spring-security-oauth2-core'
+    implementation 'org.springframework.security:spring-security-oauth2-jose'
+
+    implementation 'org.springframework:spring-webflux'
+
+    implementation 'com.nimbusds:nimbus-jose-jwt'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    testCompile 'org.springframework.security:spring-security-test'
+    testCompile 'junit:junit'
+    testCompile 'com.jayway.jsonpath:json-path'
+
 }

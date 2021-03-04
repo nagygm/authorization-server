@@ -6,8 +6,17 @@ repositories {
     gradlePluginPortal()
 }
 
+ext.dep = [
+    kotlin : [
+        platform: "1.4.30"
+    ],
+    spring_boot_bom : "2.4.3",
+]
+
 dependencies {
-    implementation 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.30'
-    implementation 'org.jetbrains.kotlin:kotlin-serialization:1.4.30'
-    implementation 'org.springframework.boot:spring-boot-gradle-plugin:2.4.3'
+    implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:${project.ext.dep.kotlin.platform}"
+    implementation "org.jetbrains.kotlin:kotlin-serialization:${project.ext.dep.kotlin.platform}"
+    implementation "org.springframework.boot:spring-boot-gradle-plugin:${project.ext.dep.spring_boot_bom}"
 }
+
+
