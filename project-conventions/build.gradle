@@ -11,6 +11,7 @@ ext.dep = [
         platform: "1.4.30"
     ],
     spring_boot_bom : "2.4.3",
+    detekt: "1.15.0"
 ]
 
 dependencies {
@@ -18,6 +19,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-serialization:${project.ext.dep.kotlin.platform}"
     implementation "org.jetbrains.kotlin:kotlin-allopen:${project.ext.dep.kotlin.platform}"
     implementation "org.springframework.boot:spring-boot-gradle-plugin:${project.ext.dep.spring_boot_bom}"
+    implementation "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:${project.ext.dep.detekt}"
 }
 
 

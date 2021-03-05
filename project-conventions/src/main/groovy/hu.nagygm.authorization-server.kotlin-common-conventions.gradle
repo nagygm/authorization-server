@@ -5,6 +5,7 @@ plugins {
     id "io.spring.dependency-management"
     id 'jacoco'
     id "org.jetbrains.kotlin.plugin.allopen" apply false
+    id("io.gitlab.arturbosch.detekt")
 }
 
 repositories {
@@ -34,4 +35,15 @@ test {
 }
 jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
+}
+
+detekt {
+    buildUponDefaultConfig = true // preconfigure defaults
+
+    reports {
+        html.enabled = true // observe findings in your browser with structure and code snippets
+        xml.enabled = true // checkstyle like format mainly for integrations like Jenkins
+        txt.enabled = true // similar to the console output, contains issue signature to manually edit baseline files
+        sarif.enabled = true // standardized SARIF format (https://sarifweb.azurewebsites.net/) to support integrations with Github Code Scanning
+    }
 }
