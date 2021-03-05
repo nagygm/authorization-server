@@ -1,10 +1,15 @@
 plugins {
     id 'hu.nagygm.authorization-server.kotlin-application-conventions'
+    id "org.jetbrains.kotlin.plugin.spring" version "1.4.31"
+
 }
 
 group 'hu.nagygm'
-version'0.0.1'
+version '0.0.1'
 
 dependencies {
     implementation project(':oauth2')
+    implementation "org.springframework.boot:spring-boot-starter-webflux"
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
 }

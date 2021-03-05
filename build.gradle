@@ -1,5 +1,4 @@
 plugins {
-    id "io.spring.dependency-management" version "1.0.11.RELEASE"
 }
 
 repositories {
@@ -12,8 +11,11 @@ allprojects {
     group = "hu.nagygm"
 
     repositories {
+        mavenLocal()           
         jcenter()
+        maven { url 'https://kotlin.bintray.com/kotlinx' }
     }
+
     ext.dep = [
         coroutines : "1.4.2",
         jacoco : "0.8.6",
@@ -24,11 +26,10 @@ allprojects {
         spring_boot_bom : "2.4.3",
     ]
 
-    assert project.ext.dep.junit == "5.6.2"
 }
 
-//dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+dependencies {
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 //    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutines_version"
 //
@@ -36,8 +37,8 @@ allprojects {
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${coroutines_version}")
 //
 //    implementation "org.springframework.security:spring-security-config"
-//    implementation "org.springframework.security:spring-security-web"
 //    implementation "org.springframework.security:spring-security-oauth2-core"
+//    implementation "org.springframework.security:spring-security-web"
 //    implementation "org.springframework.security:spring-security-oauth2-jose"
 //    implementation "org.springframework.security:spring-security-core"
 //
@@ -54,7 +55,7 @@ allprojects {
 //    testCompile 'org.assertj:assertj-core'
 //    testCompile 'org.mockito:mockito-core'
 //    testCompile 'com.jayway.jsonpath:json-path'
-//}
+}
 
 
 

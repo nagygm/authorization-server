@@ -16,6 +16,7 @@ ext.dep = [
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:${project.ext.dep.kotlin.platform}"
     implementation "org.jetbrains.kotlin:kotlin-serialization:${project.ext.dep.kotlin.platform}"
+    implementation "org.jetbrains.kotlin:kotlin-allopen:${project.ext.dep.kotlin.platform}"
     implementation "org.springframework.boot:spring-boot-gradle-plugin:${project.ext.dep.spring_boot_bom}"
 }
 
