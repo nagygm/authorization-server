@@ -7,9 +7,32 @@ plugins {
 group 'hu.nagygm'
 version '0.0.1'
 
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+
+configurations.integrationTestImplementation.extendsFrom configurations.testImplementation
+
 dependencies {
     implementation project(':oauth2')
     implementation "org.springframework.boot:spring-boot-starter-webflux"
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
     testImplementation "org.springframework.boot:spring-boot-starter-test"
+    integrationTestImplementation "org.springframework.boot:spring-boot-starter-test"
 }
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+check.dependsOn integrationTest
+integrationTest.mustRunAfter test

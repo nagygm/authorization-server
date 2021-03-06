@@ -62,6 +62,6 @@ pitest {
     targetClasses = ['hu.nagygm.*']
     threads = 4
     outputFormats = ['XML', 'HTML']
-    timestampedReports = false
+    timestampedReports = true
     failWhenNoMutations = false
 }

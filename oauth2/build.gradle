@@ -22,8 +22,7 @@ dependencies {
     implementation 'com.nimbusds:nimbus-jose-jwt'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    testCompile 'org.springframework.security:spring-security-test'
-    testCompile 'junit:junit'
-    testCompile 'com.jayway.jsonpath:json-path'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'com.jayway.jsonpath:json-path'
 
 }
