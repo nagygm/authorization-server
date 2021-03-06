@@ -1,11 +1,12 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' apply false
-    id 'org.jetbrains.kotlin.kapt' apply false
-    id 'org.jetbrains.kotlin.plugin.serialization' apply false
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.kapt'
+    id 'org.jetbrains.kotlin.plugin.serialization'
     id "io.spring.dependency-management"
     id 'jacoco'
-    id "org.jetbrains.kotlin.plugin.allopen" apply false
+    id "org.jetbrains.kotlin.plugin.allopen"
     id("io.gitlab.arturbosch.detekt")
+    id 'info.solidsoft.pitest'
 }
 
 repositories {
@@ -18,8 +19,15 @@ dependencies {
     implementation platform("org.jetbrains.kotlin:kotlin-bom:${project.ext.dep.kotlin.platform}")
     implementation platform("org.springframework.boot:spring-boot-dependencies:${project.ext.dep.spring_boot_bom}")
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+
+    testImplementation(platform("org.junit:junit-bom:${project.ext.dep.junit.bom}"))
     testImplementation "org.junit.jupiter:junit-jupiter-api"
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "io.kotest:kotest-runner-junit5-jvm:${project.ext.dep.kotest}"
+    testImplementation "io.kotest:kotest-assertions-core:${project.ext.dep.kotest}"
+    testImplementation "io.kotest:kotest-property:${project.ext.dep.kotest}"
+    testImplementation("io.kotest:kotest-plugins-pitest:${project.ext.dep.kotest}")
 }
 
 tasks.named('test') {
@@ -46,4 +54,14 @@ detekt {
         txt.enabled = true // similar to the console output, contains issue signature to manually edit baseline files
         sarif.enabled = true // standardized SARIF format (https://sarifweb.azurewebsites.net/) to support integrations with Github Code Scanning
     }
+}
+
+pitest {
+//    junit5PluginVersion = '0.12'
+    testPlugin = "Kotest"
+    targetClasses = ['hu.nagygm.*']
+    threads = 4
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    failWhenNoMutations = false
 }

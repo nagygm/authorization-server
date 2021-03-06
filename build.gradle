@@ -24,6 +24,8 @@ allprojects {
             platform: "1.4.30"
         ],
         spring_boot_bom : "2.4.3",
+        junit: [bom:"5.7.1"],
+        kotest: "4.4.1"
     ]
 
 }
