@@ -1,13 +1,5 @@
 package hu.nagygm.oauth2.core
 
-//enum class AuthorizationGrantType(val code: String) {
-//    AUTHORIZATION_CODE("authorization_code"),
-//    IMPLICIT("implicit"),
-//    REFRESH_TOKEN("refresh_token"),
-//    CLIENT_CREDENTIALS("client_credentials"),
-//    PASSWORD("password");
-//}
-
 enum class AuthorizationMethod(val code: String) {
     NONE("none"),
     POST("post"),

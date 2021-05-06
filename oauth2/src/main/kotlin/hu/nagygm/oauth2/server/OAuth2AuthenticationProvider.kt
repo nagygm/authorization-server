@@ -6,11 +6,12 @@ import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.core.Authentication
 
 open class OAuth2AuthenticationProvider(
-    val clientRegistrationRepository: ClientRegistrationRepository,
-    val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository
+    private val clientRegistrationRepository: ClientRegistrationRepository,
+    private val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository
 ) : AuthenticationProvider {
 
     override fun authenticate(authentication: Authentication?): Authentication {
+        checkNotNull(authentication) { "Authentication must not be null!" }
         TODO("add client login repository for machine and ip authorization")
         TODO("Not yet implemented")
     }

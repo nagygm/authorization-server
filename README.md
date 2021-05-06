@@ -1,5 +1,6 @@
 # Introduction
 Authentication and authorization server with spring reactive stack
+The server uses kotlin coroutines to process web requests.
 
 # Starting in docker
 cd server
