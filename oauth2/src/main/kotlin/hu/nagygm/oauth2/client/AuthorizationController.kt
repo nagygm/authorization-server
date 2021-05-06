@@ -5,11 +5,11 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-class AuthorizationController(private val OAuth2AuthorizationRepository: OAuth2AuthorizationRepository) {
+class AuthorizationController(private val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository) {
 
     @GetMapping("/authorize")
     suspend fun authorize(): ResponseEntity<Any> {
-        OAuth2AuthorizationRepository.authorizeClient()
+        oAuth2AuthorizationRepository.findById("")
         return ResponseEntity.ok().build()
     }
 }

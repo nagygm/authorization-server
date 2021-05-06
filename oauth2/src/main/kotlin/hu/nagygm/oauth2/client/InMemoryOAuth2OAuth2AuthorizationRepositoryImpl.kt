@@ -1,7 +1,9 @@
 package hu.nagygm.oauth2.client
 
+import org.springframework.stereotype.Repository
 import java.util.concurrent.ConcurrentHashMap
 
+@Repository
 class InMemoryOAuth2OAuth2AuthorizationRepositoryImpl : OAuth2AuthorizationRepository {
     private val authorizations: MutableMap<String, OAuth2Authorization> = ConcurrentHashMap()
 

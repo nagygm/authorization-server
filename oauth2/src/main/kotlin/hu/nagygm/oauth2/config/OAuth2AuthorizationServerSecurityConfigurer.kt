@@ -9,5 +9,12 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 class OAuth2AuthorizationServerSecurityConfigurer<B : HttpSecurityBuilder<B>>
     : AbstractHttpConfigurer<OAuth2AuthorizationServerSecurityConfigurer<B>, B>() {
 
+    override fun init(builder: B) {
+        super.init(builder)
+    }
+
+    override fun configure(builder: B) {
+        super.configure(builder)
+    }
 
 }

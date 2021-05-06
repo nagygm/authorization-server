@@ -24,5 +24,8 @@ dependencies {
 
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.jayway.jsonpath:json-path'
+}
 
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
 }
