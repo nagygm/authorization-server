@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <title>Thymeleaf Sandbox</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+
+<body>
+
+<h2>Confirm consent</h2>
+
+<p>
+  Scopes:
+</p>
+
+<ul>
+  <li>
+  </li>
+</ul>
+
+<form th:action="@{/consent}" method="post" id="consentForm">
+  <input type="submit" value="Accept" onclick="acceptFunction()"/>
+  <input type="submit" value="Reject" onclick="rejectFunction()"/>
+  <input type="hidden" id="consentAccepted" value=false th:name="consentAccepted"/>
+  <input type="hidden" th:name="${_csrf.parameterName}"
+         th:value="${_csrf.token}"/>
+</form>
+<script>
+  function acceptFunction() {
+    let form = document.getElementById("consentForm");
+    form.elements.consentAccepted.value = true
+  }
+
+  function rejectFunction() {
+    let form = document.getElementById("consentForm");
+    form.elements.consentAccepted.value = false
+  }
+
+</script>
+
+</body>
+
+</html>

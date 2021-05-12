@@ -1,5 +1,6 @@
 package hu.nagygm.oauth2.client
 
+import hu.nagygm.oauth2.client.registration.ClientRegistration
 import org.springframework.security.oauth2.core.AbstractOAuth2Token
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 

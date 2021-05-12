@@ -1,12 +1,12 @@
 version: "3.8"
 services:
-  app:
-    build: ""
-    ports:
-      - "8080:8080"
-      - "5005:5005"
-    volumes:
-      - .:/app
+#  app:
+#    build: ""
+#    ports:
+#      - "8080:8080"
+#      - "5005:5005"
+#    volumes:
+#      - .:/app
   redis:
     ports:
       - "6379:6379"
@@ -24,7 +24,7 @@ services:
     image: "mongo"
     restart: always
     ports:
-      - "57017:27017"
+      - "47017:27017"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=authserver
       - MONGO_INITDB_ROOT_PASSWORD=authserver

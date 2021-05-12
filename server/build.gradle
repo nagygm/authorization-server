@@ -25,6 +25,15 @@ dependencies {
     implementation project(':oauth2')
     implementation "org.springframework.boot:spring-boot-starter-webflux"
     implementation "org.springframework.boot:spring-boot-starter-security"
+    implementation 'org.springframework.security:spring-security-oauth2-core'
+    implementation 'org.springframework.security:spring-security-oauth2-jose'
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactive'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
     testImplementation "org.springframework.boot:spring-boot-starter-test"
     integrationTestImplementation "org.springframework.boot:spring-boot-starter-test"

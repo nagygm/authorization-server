@@ -26,3 +26,10 @@ enum class TokenType(val value: String) {
     ACCESS_TOKEN("access_token"),
     REFRESH_TOKEN("refresh_token")
 }
+
+enum class AccessTokenType(val value: String) {
+    BEARER_TOKEN(""),
+    MAC_TOKEN("")
+}
+
+// Oauth2ParameterNames
