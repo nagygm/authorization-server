@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
-@ControllerAdvice
+//@ControllerAdvice
 class SecurityControllerAdvice {
     @ModelAttribute
     fun csrfToken(exchange: ServerWebExchange): Mono<CsrfToken> {

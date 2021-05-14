@@ -11,5 +11,6 @@ data class ClientRegistration(
     val secret: String,
     val redirectUris: Set<String>,
     val authorizationGrantTypes: Set<AuthorizationGrantType>,
-    val scopes: Set<String>
+    val scopes: Set<String>,
+    val clientConfiguration: Map<ClientConfigurationParams, Any>
 )

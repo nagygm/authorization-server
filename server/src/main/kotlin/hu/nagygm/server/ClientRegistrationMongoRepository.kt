@@ -1,5 +1,7 @@
 package hu.nagygm.server
 
+import hu.nagygm.oauth2.client.registration.ClientConfiguration
+import hu.nagygm.oauth2.client.registration.ClientConfigurationParams
 import hu.nagygm.oauth2.client.registration.ClientRegistration
 import hu.nagygm.oauth2.client.registration.ClientRegistrationRepository
 import kotlinx.coroutines.reactive.awaitFirst
@@ -26,7 +28,8 @@ class ClientRegistrationRepositoryImpl(@Autowired val clientRegistrationReposito
             it.secret,
             it.redirectUris,
             it.authorizationGrantTypes,
-            it.scopes
+            it.scopes,
+            it.clientConfiguration
         ) }.awaitFirst()
     }
 
@@ -37,7 +40,8 @@ class ClientRegistrationRepositoryImpl(@Autowired val clientRegistrationReposito
             it.secret,
             it.redirectUris,
             it.authorizationGrantTypes,
-            it.scopes
+            it.scopes,
+            it.clientConfiguration
         ) }.awaitFirstOrNull()
     }
 
@@ -48,7 +52,8 @@ class ClientRegistrationRepositoryImpl(@Autowired val clientRegistrationReposito
             clientRegistration.secret,
             clientRegistration.redirectUris,
             clientRegistration.authorizationGrantTypes,
-            clientRegistration.scopes
+            clientRegistration.scopes,
+            clientRegistration.clientConfiguration
         )).map {
             ClientRegistration(
                 it.id,
@@ -56,7 +61,8 @@ class ClientRegistrationRepositoryImpl(@Autowired val clientRegistrationReposito
                 it.secret,
                 it.redirectUris,
                 it.authorizationGrantTypes,
-                it.scopes
+                it.scopes,
+                it.clientConfiguration
             )
         }.awaitFirst()
     }
@@ -70,5 +76,6 @@ data class ClientRegistrationEntity(
     val secret: String,
     val redirectUris: Set<String>,
     val authorizationGrantTypes: Set<AuthorizationGrantType>,
-    val scopes: Set<String>
+    val scopes: Set<String>,
+    val clientConfiguration: Map<ClientConfigurationParams, Any>
 )

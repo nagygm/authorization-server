@@ -14,6 +14,10 @@ class ClientConfiguration(private val parameters: ConcurrentMap<ClientConfigurat
         return this
     }
 
+    fun getClientConfigurationMap(): ConcurrentMap<ClientConfigurationParams, Any> {
+        return this.parameters
+    }
+
     /**
      * Should be generated
      */

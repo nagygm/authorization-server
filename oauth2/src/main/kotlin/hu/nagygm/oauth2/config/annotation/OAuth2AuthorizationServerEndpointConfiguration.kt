@@ -20,7 +20,8 @@ open class OAuth2AuthorizationServerEndpointConfiguration {
     @Bean
     open fun coRoute(@Autowired authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter() {
         accept(MediaType.APPLICATION_JSON).nest {
-            GET(Endpoint.TOKEN.path).invoke(tokenHandler::acquireToken)
+//            GET(Endpoint.TOKEN.path).invoke(tokenHandler::acquireToken)
+            POST(Endpoint.TOKEN.path).invoke(tokenHandler::acquireToken)
             GET(Endpoint.AUTHORIZATION.path).invoke(authorizationHandler::authorize)
             POST(Endpoint.AUTHORIZATION.path).invoke(authorizationHandler::authorize)
         }

@@ -1,14 +1,19 @@
 package hu.nagygm.server.config
 
+import hu.nagygm.oauth2.core.Endpoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.web.server.SecurityWebFilterChain
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
+import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler
+import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter
+import org.springframework.security.web.server.util.matcher.NegatedServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
+
 
 @Configuration
 open class BasicSecurityConfiguration {
@@ -16,25 +21,37 @@ open class BasicSecurityConfiguration {
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain? {
         http
+            .csrf().requireCsrfProtectionMatcher(NegatedServerWebExchangeMatcher { exchange ->
+                ServerWebExchangeMatchers.pathMatchers(
+                    "/authorize**", "/token**", "/login**", "/consent**"
+                ).matches(exchange)
+            }).and()
+            .authorizeExchange().pathMatchers("${Endpoint.AUTHORIZATION.path}**", "${Endpoint.TOKEN.path}**", "/favicon.ico", "/login")
+            .permitAll().and()
             .authorizeExchange()
-            .anyExchange().permitAll()
+            .anyExchange().authenticated()
             .and().formLogin()
-//            .and().csrf().requireCsrfProtectionMatcher(
-//                ServerWebExchangeMatcher { exchange ->
-//                    ServerWebExchangeMatchers.pathMatchers("/urls-with-csrf-check/**")
-//                        .matches(exchange)
-//                }
-//            )
-            .and().httpBasic()
+            .loginPage("/login")
+            .authenticationSuccessHandler(redirectSuccessHandler()).and().logout()
+//            .and().exceptionHandling().authenticationEntryPoint(RedirectServerAuthenticationEntryPoint("/login"))
+//            .and().httpBasic()
+            .and().headers().referrerPolicy()
+            .policy(ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.ORIGIN_WHEN_CROSS_ORIGIN)
         return http.build()
     }
 
+    private fun redirectSuccessHandler(): RedirectServerAuthenticationSuccessHandler {
+        val handler = RedirectServerAuthenticationSuccessHandler()
+        return handler
+    }
+
     @Bean
-    fun userDetailsService(): MapReactiveUserDetailsService {
+    fun userDetailsService(): ReactiveUserDetailsService {
         val user: UserDetails = User.withDefaultPasswordEncoder()
             .username("user").password("user").roles("USER")
             .build()
         return MapReactiveUserDetailsService(user)
     }
+
 
 }

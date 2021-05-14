@@ -1,44 +1,36 @@
 package hu.nagygm.server.web
 
-import org.springframework.http.MediaType
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.UserDetails
+import hu.nagygm.server.consent.ConsentService
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.thymeleaf.spring5.context.webflux.IReactiveDataDriverContextVariable
-import org.thymeleaf.spring5.context.webflux.ReactiveDataDriverContextVariable
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.server.ServerWebExchange
 
 
 @Controller
-class UserController {
+class UserController(
+    @Autowired val consentService: ConsentService
+) {
 
     @GetMapping("/consent")
-    suspend fun getConsentPage(): String {
-//        val reactiveDataDrivenMode: IReactiveDataDriverContextVariable = ReactiveDataDriverContextVariable(
-//            movieRepository.findAll(), 1)
-
-//        model.addAttribute("movies", reactiveDataDrivenMode)
-
+    suspend fun getConsentPage(
+        @RequestParam("grant_request_id") grantRequestId: String,
+        @RequestParam("client_id") clientId: String,
+        model: Model
+    ): String {
+        model.addAttribute("consent", consentService.createConsent(grantRequestId, clientId))
         return "consent"
     }
 
-    @PostMapping(
-        path = ["/consent"],
-        consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE,
-            MediaType.APPLICATION_JSON_VALUE]
-    )
-    suspend fun postConsent(@AuthenticationPrincipal userDetails: UserDetails): String {
 
-        return "redirect"
+
+
+    @GetMapping("/login")
+    suspend fun loginPage(swe: ServerWebExchange): String {
+//        swe.session.map { it.attributes.put("SPRING_SECURITY_SAVED_REQUEST", swe.request.headers["Referer"]) }
+        return "login2"
     }
-
-    data class ConsentFormRequest(
-        val scopes: List<String>,
-        val permissionGranted: Boolean,
-        val consentId: String
-    )
 
 }

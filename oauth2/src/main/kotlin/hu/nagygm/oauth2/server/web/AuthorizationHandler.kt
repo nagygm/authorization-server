@@ -1,26 +1,19 @@
 package hu.nagygm.oauth2.server.web
 
-import hu.nagygm.oauth2.client.registration.ClientRegistration
-import hu.nagygm.oauth2.client.registration.ClientRegistrationRepository
-import hu.nagygm.oauth2.core.Endpoint
-import kotlinx.coroutines.flow.flow
+import hu.nagygm.oauth2.client.registration.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.security.oauth2.core.*
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
 import org.springframework.stereotype.Service
 import org.springframework.util.MultiValueMap
-import org.springframework.validation.Errors
-import org.springframework.validation.Validator
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.bodyAndAwait
-import org.springframework.web.util.UriComponentsBuilder
-import reactor.core.publisher.Mono
 import java.net.MalformedURLException
 import java.net.URL
 
@@ -60,12 +53,17 @@ unrecognized request parameters.  Request and response parameters
 MUST NOT be included more than once.
  */
 @Service
-open class AuthorizationHandler(@Autowired var clientRegistrationRepository: ClientRegistrationRepository) {
+open class AuthorizationHandler(
+    @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
+    @Autowired val grantRequestService: GrantRequestService
+) {
 
     suspend fun authorize(serverRequest: ServerRequest): ServerResponse {
         val request = requestToAuthorizationRequest(serverRequest)
-        try {
-            AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository).validate(request)
+        val grantRequestDeffered = try {
+            GlobalScope.async {
+                AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository, grantRequestService).validate(request)
+            }
         } catch (ex: OAuth2AuthorizationException) {
             return ServerResponse.badRequest().body(mono { ex.error }, OAuth2Error::class.java).awaitFirst()
         }
@@ -78,8 +76,12 @@ open class AuthorizationHandler(@Autowired var clientRegistrationRepository: Cli
         //if consent added save consent for listed scopes and client
         //save login data for later use
         //issue id and access token as site only cookie for authorization server
-        //issue 
-        return ServerResponse.status(HttpStatus.FOUND).header("Location", "/consent").build().awaitFirst()
+        //issue
+        val grantRequest = grantRequestDeffered.await()
+//        val location = "/login?redirect_to=/consent?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
+        val location = "/consent?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
+
+        return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
     }
 
     private fun requestToAuthorizationRequest(request: ServerRequest): AuthorizationRequest {
@@ -90,7 +92,7 @@ open class AuthorizationHandler(@Autowired var clientRegistrationRepository: Cli
         val clientId: String = parameters.getFirst(OAuth2ParameterNames.CLIENT_ID) ?: ""
         val state: String? = parameters.getFirst(OAuth2ParameterNames.STATE)
         val responseType: String = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE) ?: ""
-        val redirectUri: String = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
+        var redirectUri: String = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
         val scopes: Set<String>
 
         init {
@@ -104,11 +106,14 @@ open class AuthorizationHandler(@Autowired var clientRegistrationRepository: Cli
             }
         }
 
-        class AuthorizationRequestValidator(private val clientRegistrationRepository: ClientRegistrationRepository) {
+        class AuthorizationRequestValidator(
+            private val clientRegistrationRepository: ClientRegistrationRepository,
+            private val grantRequestService: GrantRequestService
+        ) {
             fun supports(clazz: Class<*>): Boolean =
                 clazz.isAssignableFrom(AuthorizationRequest::class.java)
 
-            suspend fun validate(target: AuthorizationRequest) {
+            suspend fun validate(target: AuthorizationRequest): GrantRequest {
 
                 //----- VALIDATE RESPONSE TYPE TODO extract to business logic validator
                 if (target.responseType.isBlank()) {
@@ -160,6 +165,8 @@ open class AuthorizationHandler(@Autowired var clientRegistrationRepository: Cli
                         OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST)
                     )
                 }
+                if (target.redirectUri.isBlank()) target.redirectUri = registration.redirectUris.first()
+                return grantRequestService.saveGrantRequest(target)
             }
 
             private fun validateUri(uri: String): Boolean {
@@ -171,21 +178,22 @@ open class AuthorizationHandler(@Autowired var clientRegistrationRepository: Cli
                 return true
             }
 
+            //TODO to util class
             object SupportedResponseTypesRegistry {
                 val responseTypes: Map<String, AuthorizationGrantType> = hashMapOf(
                     OAuth2AuthorizationResponseType.CODE.value to AuthorizationGrantType.AUTHORIZATION_CODE,
                     OAuth2AuthorizationResponseType.TOKEN.value to AuthorizationGrantType.IMPLICIT
                 )
 
-                suspend fun contains(responseType: String?): Boolean {
+                suspend fun contains(responseType: String): Boolean {
                     return responseTypes.contains(responseType)
                 }
 
-                suspend fun notContains(responseType: String?): Boolean {
+                suspend fun notContains(responseType: String): Boolean {
                     return !responseTypes.contains(responseType)
                 }
 
-                suspend fun responseTypeToGrantType(responseType: String?): AuthorizationGrantType? {
+                suspend fun responseTypeToGrantType(responseType: String): AuthorizationGrantType? {
                     return responseTypes[responseType]
                 }
             }
