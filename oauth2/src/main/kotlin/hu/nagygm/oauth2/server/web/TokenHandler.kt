@@ -30,26 +30,21 @@ import java.util.*
 open class TokenHandler(
     @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
     @Autowired val grantRequestService: GrantRequestService,
-    @Autowired val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository
+    @Autowired val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository,
+    @Autowired val mapper: ObjectMapper
 ) {
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32)
 
     suspend fun acquireToken(request: ServerRequest): ServerResponse {
         val response = validate(formToTokenRequest(request.awaitFormData()))
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(
-            response
-        ).awaitFirst()
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .headers { it["Cache-Control"] = "no-store"; it["Pragma"] = "no-cache" }
+            .bodyValue(response).awaitFirst()
     }
 
-    suspend fun revokeToken(request: ServerRequest): ServerResponse = dummy(request)
+    suspend fun revokeToken(request: ServerRequest): ServerResponse = TODO("Implement revocation")
 
-    private suspend fun dummy(request: ServerRequest): ServerResponse =
-        ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON).bodyAndAwait(flow {
-                delay(1000L)
-                emit(1)
-            })
 
     private suspend fun validate(request: TokenRequest): TokenResponse {
 
@@ -104,7 +99,6 @@ open class TokenHandler(
     }
 
     private suspend fun jwtEncoder(token: OAuth2AccessToken): String {
-        val mapper = ObjectMapper()
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         val jwsObject = JWSObject(
             JWSHeader(JWSAlgorithm.HS256),
