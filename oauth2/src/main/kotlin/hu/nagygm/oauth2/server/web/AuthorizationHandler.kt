@@ -60,25 +60,11 @@ open class AuthorizationHandler(
 
     suspend fun authorize(serverRequest: ServerRequest): ServerResponse {
         val request = requestToAuthorizationRequest(serverRequest)
-        val grantRequestDeffered = try {
-            GlobalScope.async {
-                AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository, grantRequestService).validate(request)
-            }
+        val grantRequest = try {
+            AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository, grantRequestService).validate(request)
         } catch (ex: OAuth2AuthorizationException) {
             return ServerResponse.badRequest().body(mono { ex.error }, OAuth2Error::class.java).awaitFirst()
         }
-        //redirect to consent page
-        //if not logged in redirect to login page using security then back to consent page listing scopes
-        //if consent approved redirect with code and state to client redirect uri
-        //if error or consent denied redirect to client uri with error or access denied
-        //if redirect uri invalid or not registered then show error on consent page
-
-        //if consent added save consent for listed scopes and client
-        //save login data for later use
-        //issue id and access token as site only cookie for authorization server
-        //issue
-        val grantRequest = grantRequestDeffered.await()
-//        val location = "/login?redirect_to=/consent?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
         val location = "/consent?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
 
         return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
@@ -185,15 +171,15 @@ open class AuthorizationHandler(
                     OAuth2AuthorizationResponseType.TOKEN.value to AuthorizationGrantType.IMPLICIT
                 )
 
-                suspend fun contains(responseType: String): Boolean {
+                fun contains(responseType: String): Boolean {
                     return responseTypes.contains(responseType)
                 }
 
-                suspend fun notContains(responseType: String): Boolean {
+                fun notContains(responseType: String): Boolean {
                     return !responseTypes.contains(responseType)
                 }
 
-                suspend fun responseTypeToGrantType(responseType: String): AuthorizationGrantType? {
+                fun responseTypeToGrantType(responseType: String): AuthorizationGrantType? {
                     return responseTypes[responseType]
                 }
             }

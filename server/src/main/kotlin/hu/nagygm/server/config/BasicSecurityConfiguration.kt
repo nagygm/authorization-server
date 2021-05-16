@@ -26,23 +26,21 @@ open class BasicSecurityConfiguration {
                     "/authorize**", "/token**", "/login**", "/consent**"
                 ).matches(exchange)
             }).and()
-            .authorizeExchange().pathMatchers("${Endpoint.AUTHORIZATION.path}**", "${Endpoint.TOKEN.path}**", "/favicon.ico", "/login")
+            .authorizeExchange()
+            .pathMatchers("${Endpoint.AUTHORIZATION.path}**", "${Endpoint.TOKEN.path}**", "/favicon.ico", "/login")
             .permitAll().and()
             .authorizeExchange()
             .anyExchange().authenticated()
             .and().formLogin()
             .loginPage("/login")
             .authenticationSuccessHandler(redirectSuccessHandler()).and().logout()
-//            .and().exceptionHandling().authenticationEntryPoint(RedirectServerAuthenticationEntryPoint("/login"))
-//            .and().httpBasic()
             .and().headers().referrerPolicy()
             .policy(ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.ORIGIN_WHEN_CROSS_ORIGIN)
         return http.build()
     }
 
     private fun redirectSuccessHandler(): RedirectServerAuthenticationSuccessHandler {
-        val handler = RedirectServerAuthenticationSuccessHandler()
-        return handler
+        return RedirectServerAuthenticationSuccessHandler()
     }
 
     @Bean
@@ -52,6 +50,5 @@ open class BasicSecurityConfiguration {
             .build()
         return MapReactiveUserDetailsService(user)
     }
-
 
 }

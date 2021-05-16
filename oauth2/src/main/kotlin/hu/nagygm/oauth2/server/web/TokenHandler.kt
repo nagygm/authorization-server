@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator
 import org.springframework.security.oauth2.core.*
@@ -31,7 +32,7 @@ open class TokenHandler(
     @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
     @Autowired val grantRequestService: GrantRequestService,
     @Autowired val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository,
-    @Autowired val mapper: ObjectMapper
+    @Autowired @Qualifier("tokenJsonMapper") val mapper: ObjectMapper
 ) {
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32)
@@ -45,9 +46,7 @@ open class TokenHandler(
 
     suspend fun revokeToken(request: ServerRequest): ServerResponse = TODO("Implement revocation")
 
-
     private suspend fun validate(request: TokenRequest): TokenResponse {
-
         if (request.grantType == AuthorizationGrantType.AUTHORIZATION_CODE.value) {
             if (!request.code.isNullOrBlank() && !request.clientId.isNullOrBlank()) {
                 val clientRegistration = clientRegistrationRepository.findByClientId(request.clientId)
@@ -61,19 +60,16 @@ open class TokenHandler(
                     throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
                 }
                 if (Instant.now().isBefore(grantRequest.codeCreatedAt?.plusSeconds(600L))) {
+                    return generateToken(request, clientRegistration, grantRequest)
                 } else {
                     throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
                 }
-
-                return generateToken(request, clientRegistration, grantRequest)
             } else {
                 throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT)))
             }
         } else {
             throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_GRANT_TYPE))
         }
-
-
     }
 
     private suspend fun generateToken(
@@ -85,7 +81,7 @@ open class TokenHandler(
         val accessToken = OAuth2AccessToken(
             OAuth2AccessToken.TokenType.BEARER, codeGenerator.generateKey(), now, now.plusSeconds(
                 (clientRegistration.clientConfiguration[ClientConfigurationParams.ACCESS_TOKEN_LIFETIME] as Int).toLong()
-            )
+            ), grantRequest.scopes //TODO fix get scopes from consent
         )
         val token = OAuth2Authorization(
             UUID.randomUUID().toString(), clientRegistration, clientRegistration.clientId, AuthorizationGrantType.AUTHORIZATION_CODE,

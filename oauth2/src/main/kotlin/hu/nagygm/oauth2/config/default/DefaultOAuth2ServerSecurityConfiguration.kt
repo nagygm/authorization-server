@@ -11,10 +11,8 @@ import org.springframework.security.web.server.util.matcher.PathPatternParserSer
 
 /**
  * Default security configuration for the authorization server endpoints
- * TODO add csrf protection
- * TODO add extra configuration
  */
-@Configuration
+//@Configuration
 open class DefaultOAuth2ServerSecurityConfiguration {
 
     @Bean

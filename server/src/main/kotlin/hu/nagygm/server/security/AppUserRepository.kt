@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 
 interface AppUserRepository : ReactiveMongoRepository<AppUser, String> {
     suspend fun findByUsername(username: String): AppUser
+    suspend fun save(appUser: AppUser): AppUser
 }
 
 @Document

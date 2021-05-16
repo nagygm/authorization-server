@@ -45,7 +45,7 @@ class ConsentServiceImpl(
                 granRequest.redirectUri,
                 granRequest.id!!
             )
-        ).doOnNext { println("${it.id}---------------------------------------------") }.awaitFirst()
+        ).awaitFirst()
     }
 
     override suspend fun processConsent(id: String, accept: Boolean): ConsentResponse {
@@ -126,31 +126,3 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
 
 }
 
-interface GrantRequestRepository : ReactiveMongoRepository<GrantRequestEntity, String> {
-    suspend fun getByIdAndClientId(id: String, clientId: String): GrantRequestEntity
-    suspend fun getByCodeAndAndClientId(code: String, clientId: String): GrantRequestEntity
-}
-
-@Document
-class GrantRequestEntity(
-    override val redirectUri: String,
-    override val scopes: Set<String>,
-    override val responseType: String,
-    override val clientId: String,
-    @Id
-    override var id: String?,
-    override var code: String?,
-    override val state: String,
-    override var codeCreatedAt: Instant?,
-) : GrantRequest {
-    constructor(grantRequest: GrantRequest) : this(
-        grantRequest.redirectUri,
-        grantRequest.scopes,
-        grantRequest.responseType,
-        grantRequest.clientId,
-        grantRequest.id,
-        grantRequest.code,
-        grantRequest.state,
-        grantRequest.codeCreatedAt
-    )
-}

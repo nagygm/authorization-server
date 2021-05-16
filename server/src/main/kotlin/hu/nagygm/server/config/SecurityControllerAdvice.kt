@@ -12,6 +12,7 @@ class SecurityControllerAdvice {
     @ModelAttribute
     fun csrfToken(exchange: ServerWebExchange): Mono<CsrfToken> {
         val csrfToken: Mono<CsrfToken>? = exchange.getAttribute(CsrfToken::class.java.name)
+        TODO("Add back after fixing csrf token for redirect post using csr token repository and oauth2 state attribute")
         return csrfToken!!.doOnSuccess { token ->
             exchange.attributes[CsrfRequestDataValueProcessor.DEFAULT_CSRF_ATTR_NAME] = token
         }
