@@ -10,8 +10,4 @@ class AuthorizationServerApplicationTest : AnnotationSpec() {
         a shouldBe "Hello World"
     }
 
-    @Test
-    fun `Should generate test mutation during pitest`() {
-        pitest(1, 2) shouldBe 3
-    }
 }
