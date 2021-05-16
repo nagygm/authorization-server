@@ -1,5 +1,6 @@
 package hu.nagygm.oauth2.server.handler
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.nimbusds.jose.JWSAlgorithm
@@ -133,8 +134,11 @@ open class TokenHandler(
     )
 
     data class TokenResponse(
+        @field:JsonProperty("access_token")
         val accessToken: String,
+        @field:JsonProperty("token_type")
         val tokenType: String,
+        @field:JsonProperty("expires_in")
         val expiresIn: Int,
         val scope: String
     )
