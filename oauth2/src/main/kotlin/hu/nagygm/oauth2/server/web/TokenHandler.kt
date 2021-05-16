@@ -79,19 +79,29 @@ open class TokenHandler(
     ): TokenResponse {
         val now = Instant.now()
         val accessToken = OAuth2AccessToken(
-            OAuth2AccessToken.TokenType.BEARER, codeGenerator.generateKey(), now, now.plusSeconds(
+            OAuth2AccessToken.TokenType.BEARER,
+            codeGenerator.generateKey(),
+            now,
+            now.plusSeconds(
                 (clientRegistration.clientConfiguration[ClientConfigurationParams.ACCESS_TOKEN_LIFETIME] as Int).toLong()
-            ), grantRequest.scopes //TODO fix get scopes from consent
+            ),
+            grantRequest.scopes //TODO fix get scopes from consent
         )
         val token = OAuth2Authorization(
-            UUID.randomUUID().toString(), clientRegistration, clientRegistration.clientId, AuthorizationGrantType.AUTHORIZATION_CODE,
+            UUID.randomUUID().toString(),
+            clientRegistration,
+            clientRegistration.clientId,
+            AuthorizationGrantType.AUTHORIZATION_CODE,
             hashSetOf(accessToken), emptyMap()
         )
         oAuth2AuthorizationRepository.save(
             token
         )
-        return TokenResponse(jwtEncoder(accessToken), "authorization_code", 3600, "test")
-
+        return TokenResponse(jwtEncoder(accessToken),
+            OAuth2AccessToken.TokenType.BEARER.value,
+            3600,
+            grantRequest.scopes.reduce { s1, s2 -> "$s1 $s2}" }
+        )
     }
 
     private suspend fun jwtEncoder(token: OAuth2AccessToken): String {
