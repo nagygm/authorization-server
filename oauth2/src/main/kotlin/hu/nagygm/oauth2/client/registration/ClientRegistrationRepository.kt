@@ -6,5 +6,7 @@ interface ClientRegistrationRepository {
 
     suspend fun findByClientId(clientId: String): ClientRegistration?
 
+    suspend fun findByClientIdAndSecret(clientId: String, secret: String): ClientRegistration?
+
     suspend fun save(clientRegistration: ClientRegistration): ClientRegistration
 }

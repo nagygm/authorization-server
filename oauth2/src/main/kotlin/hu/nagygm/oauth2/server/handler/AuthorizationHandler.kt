@@ -1,8 +1,6 @@
-package hu.nagygm.oauth2.server.web
+package hu.nagygm.oauth2.server.handler
 
 import hu.nagygm.oauth2.client.registration.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
@@ -80,6 +78,7 @@ open class AuthorizationHandler(
         val responseType: String = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE) ?: ""
         var redirectUri: String = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
         val scopes: Set<String>
+        val clientSecret: String = parameters.getFirst(OAuth2ParameterNames.CLIENT_SECRET) ?: ""
 
         init {
 
@@ -99,10 +98,10 @@ open class AuthorizationHandler(
             fun supports(clazz: Class<*>): Boolean =
                 clazz.isAssignableFrom(AuthorizationRequest::class.java)
 
-            suspend fun validate(target: AuthorizationRequest): GrantRequest {
+            suspend fun validate(authorizationRequest: AuthorizationRequest): GrantRequest {
 
                 //----- VALIDATE RESPONSE TYPE TODO extract to business logic validator
-                if (target.responseType.isBlank()) {
+                if (authorizationRequest.responseType.isBlank()) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
@@ -110,18 +109,18 @@ open class AuthorizationHandler(
                             ""
                         )
                     )
-                } else if (SupportedResponseTypesRegistry.notContains(target.responseType)) {
+                } else if (SupportedResponseTypesRegistry.notContains(authorizationRequest.responseType)) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(
                             OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE,
-                            "Unsupported response type: ${target.responseType}",
+                            "Unsupported response type: ${authorizationRequest.responseType}",
                             ""
                         )
                     )
                 }
                 //----- VALIDATE client ID TODO extract to business logic validator
 
-                if (target.clientId.isBlank()) {
+                if (authorizationRequest.clientId.isBlank()) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
@@ -131,21 +130,21 @@ open class AuthorizationHandler(
                     )
                 }
 
-                val registration = clientRegistrationRepository.findByClientId(target.clientId)
+                val registration = clientRegistrationRepository.findByClientIdAndSecret(authorizationRequest.clientId, authorizationRequest.clientSecret)
                     ?: throw OAuth2AuthorizationException(
                         OAuth2Error(
                             OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
-                            "Client not authorized: ${target.clientId}",
+                            "Client not authorized: ${authorizationRequest.clientId}",
                             ""
                         )
                     )
                 registration.authorizationGrantTypes.any {
-                    it == SupportedResponseTypesRegistry.responseTypeToGrantType(target.responseType)
+                    it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
                 }
 
                 //----- VALIDATE REDIRECT URI TODO extract to business logic validator
-                if ((registration.redirectUris.size != 1 && target.redirectUri.isBlank()) || (target.redirectUri.isNotBlank() &&
-                            (!validateUri(target.redirectUri) || !registration.redirectUris.contains(target.redirectUri)))
+                if ((registration.redirectUris.size != 1 && authorizationRequest.redirectUri.isBlank()) || (authorizationRequest.redirectUri.isNotBlank() &&
+                            (!validateUri(authorizationRequest.redirectUri) || !registration.redirectUris.contains(authorizationRequest.redirectUri)))
                 ) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST)
@@ -153,14 +152,14 @@ open class AuthorizationHandler(
                 }
 
                 //----- VALIDATE scopes TODO extract to business logic validator
-                if (!registration.scopes.containsAll(target.scopes)) {
+                if (!registration.scopes.containsAll(authorizationRequest.scopes)) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE)
                     )
                 }
 
-                if (target.redirectUri.isBlank()) target.redirectUri = registration.redirectUris.first()
-                return grantRequestService.saveGrantRequest(target)
+                if (authorizationRequest.redirectUri.isBlank()) authorizationRequest.redirectUri = registration.redirectUris.first()
+                return grantRequestService.saveGrantRequest(authorizationRequest)
             }
 
             private fun validateUri(uri: String): Boolean {

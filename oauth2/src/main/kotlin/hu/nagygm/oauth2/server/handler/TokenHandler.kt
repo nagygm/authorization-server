@@ -1,4 +1,4 @@
-package hu.nagygm.oauth2.server.web
+package hu.nagygm.oauth2.server.handler
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -10,8 +10,6 @@ import com.nimbusds.jose.crypto.MACSigner
 import hu.nagygm.oauth2.client.OAuth2Authorization
 import hu.nagygm.oauth2.client.OAuth2AuthorizationRepository
 import hu.nagygm.oauth2.client.registration.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier

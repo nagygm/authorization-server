@@ -1,6 +1,6 @@
 package hu.nagygm.oauth2.client.registration
 
-import hu.nagygm.oauth2.server.web.AuthorizationHandler
+import hu.nagygm.oauth2.server.handler.AuthorizationHandler
 import java.time.Instant
 
 interface GrantRequestService {

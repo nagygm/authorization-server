@@ -2,7 +2,7 @@ package hu.nagygm.server.consent
 
 import hu.nagygm.oauth2.client.registration.GrantRequest
 import hu.nagygm.oauth2.client.registration.GrantRequestService
-import hu.nagygm.oauth2.server.web.AuthorizationHandler
+import hu.nagygm.oauth2.server.handler.AuthorizationHandler
 import hu.nagygm.server.security.AppUserRepository
 import hu.nagygm.server.security.UserService
 import kotlinx.coroutines.reactive.awaitFirst

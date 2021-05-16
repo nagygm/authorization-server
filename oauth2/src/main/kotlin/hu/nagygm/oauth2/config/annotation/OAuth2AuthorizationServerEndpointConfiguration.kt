@@ -5,8 +5,8 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import hu.nagygm.oauth2.core.Endpoint
-import hu.nagygm.oauth2.server.web.AuthorizationHandler
-import hu.nagygm.oauth2.server.web.TokenHandler
+import hu.nagygm.oauth2.server.handler.AuthorizationHandler
+import hu.nagygm.oauth2.server.handler.TokenHandler
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
