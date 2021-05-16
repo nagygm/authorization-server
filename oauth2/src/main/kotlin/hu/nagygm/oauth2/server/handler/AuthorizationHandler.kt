@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.awaitBody
 import java.net.MalformedURLException
 import java.net.URL
 
@@ -68,8 +69,13 @@ open class AuthorizationHandler(
         return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
     }
 
-    private fun requestToAuthorizationRequest(request: ServerRequest): AuthorizationRequest {
-        return AuthorizationRequest(request.queryParams())
+    private suspend fun requestToAuthorizationRequest(request: ServerRequest): AuthorizationRequest {
+        val result = AuthorizationRequest(request.queryParams())
+        val headers: ServerRequest.Headers = request.headers()
+        val cache = request.exchange().session.cache().awaitFirst()
+        cache.attributes
+        result.clientSecret = headers.firstHeader("Authorization") ?:"" //TODO fix  not sending client secre,t spring security?
+        return result
     }
 
     class AuthorizationRequest(parameters: MultiValueMap<String, String>) {
@@ -78,7 +84,7 @@ open class AuthorizationHandler(
         val responseType: String = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE) ?: ""
         var redirectUri: String = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
         val scopes: Set<String>
-        val clientSecret: String = parameters.getFirst(OAuth2ParameterNames.CLIENT_SECRET) ?: ""
+        var clientSecret: String = ""
 
         init {
 
@@ -130,14 +136,15 @@ open class AuthorizationHandler(
                     )
                 }
 
-                val registration = clientRegistrationRepository.findByClientIdAndSecret(authorizationRequest.clientId, authorizationRequest.clientSecret)
-                    ?: throw OAuth2AuthorizationException(
-                        OAuth2Error(
-                            OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
-                            "Client not authorized: ${authorizationRequest.clientId}",
-                            ""
+                val registration =
+                    clientRegistrationRepository.findByClientIdAndSecret(authorizationRequest.clientId, authorizationRequest.clientSecret)
+                        ?: throw OAuth2AuthorizationException(
+                            OAuth2Error(
+                                OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
+                                "Client not authorized: ${authorizationRequest.clientId}",
+                                ""
+                            )
                         )
-                    )
                 registration.authorizationGrantTypes.any {
                     it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
                 }
