@@ -151,6 +151,14 @@ open class AuthorizationHandler(
                         OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST)
                     )
                 }
+
+                //----- VALIDATE scopes TODO extract to business logic validator
+                if (!registration.scopes.containsAll(target.scopes)) {
+                    throw OAuth2AuthorizationException(
+                        OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE)
+                    )
+                }
+
                 if (target.redirectUri.isBlank()) target.redirectUri = registration.redirectUris.first()
                 return grantRequestService.saveGrantRequest(target)
             }
