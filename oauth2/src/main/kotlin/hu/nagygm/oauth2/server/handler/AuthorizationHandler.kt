@@ -145,8 +145,12 @@ open class AuthorizationHandler(
                                 ""
                             )
                         )
-                registration.authorizationGrantTypes.any {
+                if(!registration.authorizationGrantTypes.any {
                     it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
+                }) {
+                    throw OAuth2AuthorizationException(
+                        OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)
+                    )
                 }
 
                 //----- VALIDATE REDIRECT URI TODO extract to business logic validator
@@ -164,6 +168,7 @@ open class AuthorizationHandler(
                         OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE)
                     )
                 }
+
 
                 if (authorizationRequest.redirectUri.isBlank()) authorizationRequest.redirectUri = registration.redirectUris.first()
                 return grantRequestService.saveGrantRequest(authorizationRequest)
