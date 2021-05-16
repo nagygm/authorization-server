@@ -99,7 +99,7 @@ open class TokenHandler(
         return TokenResponse(jwtEncoder(accessToken),
             OAuth2AccessToken.TokenType.BEARER.value,
             3600,
-            grantRequest.scopes.reduce { s1, s2 -> "$s1 $s2}" }
+            grantRequest.scopes.reduce { s1, s2 -> "$s1 $s2" }
         )
     }
 
