@@ -1,12 +1,5 @@
-version: "3.8"
+version: "3.9"
 services:
-#  app:
-#    build: ""
-#    ports:
-#      - "8080:8080"
-#      - "5005:5005"
-#    volumes:
-#      - .:/app
   redis:
     ports:
       - "6379:6379"
@@ -15,13 +8,13 @@ services:
   postgre-db:
     ports:
       - "5432:5432"
-    image: "postgres:13.2-alpine"
+    image: "postgres:14.0-alpine"
     environment:
       POSTGRES_PASSWORD: authserver
       POSTGRES_USER: authserver
       POSTGRES_DB: authserver
   mongodb:
-    image: "mongo"
+    image: "mongo:5.0.3"
     restart: always
     ports:
       - "47017:27017"
