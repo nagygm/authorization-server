@@ -8,11 +8,11 @@ repositories {
 
 ext.dep = [
     kotlin : [
-        platform: "1.4.30"
+        platform: "1.5.31"
     ],
-    spring_boot_bom : "2.4.3",
-    detekt: "1.15.0",
-    pitest: "1.5.1",
+    spring_boot_bom : "2.5.5",
+    detekt: "1.18.1",
+    pitest: "1.7.0",
 ]
 
 dependencies {

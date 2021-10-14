@@ -51,5 +51,4 @@ open class BasicSecurityConfiguration {
             .build()
         return MapReactiveUserDetailsService(user)
     }
-
 }

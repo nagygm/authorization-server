@@ -10,12 +10,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
 class SampleIntegrationTest : FunSpec() {
-    @Autowired
-    private lateinit var simpleComponent: SimpleComponent
 
     init {
         test("foo should return Bar") {
-            simpleComponent.foo() shouldBe "Bar2"
         }
     }
 }

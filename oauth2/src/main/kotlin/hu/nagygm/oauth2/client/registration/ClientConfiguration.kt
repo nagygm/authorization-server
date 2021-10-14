@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentMap
 class ClientConfiguration(private val parameters: ConcurrentMap<ClientConfigurationParams, Any> = ConcurrentHashMap()) {
     fun get(key: String): Any? {
         require(key.isNotEmpty()) { "Parameter key must not be empty" }
-        return parameters[key]
+        return parameters[ClientConfigurationParams.valueOf(key)]
     }
 
     fun put(key: ClientConfigurationParams, value: Any): ClientConfiguration {

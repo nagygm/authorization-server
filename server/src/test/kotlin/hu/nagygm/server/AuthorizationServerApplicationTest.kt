@@ -10,4 +10,9 @@ class AuthorizationServerApplicationTest : AnnotationSpec() {
         a shouldBe "Hello World"
     }
 
+    @Test
+    fun `Testing stuff`() {
+        
+    }
+
 }

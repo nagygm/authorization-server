@@ -13,7 +13,6 @@ import org.springframework.web.server.ServerWebExchange
 class UserController(
     @Autowired val consentService: ConsentService
 ) {
-
     @GetMapping("/consent")
     suspend fun getConsentPage(
         @RequestParam("grant_request_id") grantRequestId: String,
@@ -23,9 +22,6 @@ class UserController(
         model.addAttribute("consent", consentService.createConsent(grantRequestId, clientId))
         return "consent"
     }
-
-
-
 
     @GetMapping("/login")
     suspend fun loginPage(swe: ServerWebExchange): String {
