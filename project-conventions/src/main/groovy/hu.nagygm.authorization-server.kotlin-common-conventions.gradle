@@ -22,6 +22,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactive'
+    implementation "io.konform:konform-jvm:${project.ext.dep.konform}"
 
 
     testImplementation(platform("org.junit:junit-bom:${project.ext.dep.junit.bom}"))
@@ -31,7 +32,10 @@ dependencies {
     testImplementation "io.kotest:kotest-runner-junit5-jvm:${project.ext.dep.kotest}"
     testImplementation "io.kotest:kotest-assertions-core:${project.ext.dep.kotest}"
     testImplementation "io.kotest:kotest-property:${project.ext.dep.kotest}"
-    testImplementation("io.kotest:kotest-plugins-pitest:${project.ext.dep.kotest}")
+//    testImplementation("io.kotest:kotest-plugins-pitest:${project.ext.dep.kotest}")
+    testImplementation("io.kotest.extensions:kotest-extensions-spring:${project.ext.dep.kotest_extension}")
+    testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:${project.ext.dep.kotest_extension}")
+    testImplementation("io.kotest.extensions:kotest-extensions-pitest:${project.ext.dep.kotest_extension}")
 }
 
 tasks.named('test') {
@@ -51,7 +55,6 @@ jacocoTestReport {
 
 detekt {
     buildUponDefaultConfig = true // preconfigure defaults
-
 
     reports {
         html.enabled = true // observe findings in your browser with structure and code snippets

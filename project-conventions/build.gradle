@@ -15,6 +15,9 @@ ext.dep = [
     pitest: "1.7.0",
 ]
 
+/**
+ * Gradle plugins
+ */
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:${project.ext.dep.kotlin.platform}"
     implementation "org.jetbrains.kotlin:kotlin-serialization:${project.ext.dep.kotlin.platform}"

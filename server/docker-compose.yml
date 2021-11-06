@@ -7,12 +7,15 @@ services:
     command: redis-server --requirepass authserver
   postgre-db:
     ports:
-      - "5432:5432"
+      - "25432:5432"
     image: "postgres:14.0-alpine"
     environment:
       POSTGRES_PASSWORD: authserver
       POSTGRES_USER: authserver
       POSTGRES_DB: authserver
+    volumes:
+      - /home/nagygm/docker_environments/authorization-server/postgres-db/postgresql:/var/lib/postgresql
+      - /home/nagygm/docker_environments/authorization-server/postgres-db/data:/var/lib/postgresql/data
   mongodb:
     image: "mongo:5.0.3"
     restart: always
@@ -23,4 +26,21 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=authserver
       - MONGO_INITDB_DATABASE=authserver
     volumes:
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - /mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - /home/nagygm/docker_environments/authorization-server/mongodb/data:/data/db
+  tc-server:
+    image: "jetbrains/teamcity-server:latest"
+    depends_on:
+      - "postgre-db"
+    ports:
+      - "8111:8111"
+    volumes:
+      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/datadir:/data/teamcity_server/datadir
+      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/logs:/opt/teamcity/logs
+  tc-agent:
+    image: "jetbrains/teamcity-agent"
+    depends_on:
+      - "tc-server"
+    environment:
+      - SERVER_URL=tc-server
+      - AGENT_NAME=local-docker

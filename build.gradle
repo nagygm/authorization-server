@@ -23,9 +23,11 @@ allprojects {
         kotlin : [
             platform: "1.5.31"
         ],
-        spring_boot_bom : "2.5.5",
+        spring_boot_bom : "2.5.6",
         junit: [bom:"5.8.1"],
-        kotest: "4.4.3"
+        kotest: "4.6.3",
+        kotest_extension: "1.0.1",
+        konform: "0.3.0"
     ]
 
 }

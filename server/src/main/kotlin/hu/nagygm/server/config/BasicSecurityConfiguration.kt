@@ -31,7 +31,6 @@ open class BasicSecurityConfiguration {
             .permitAll().and()
             .authorizeExchange()
             .anyExchange().authenticated()
-//            .and().httpBasic()
             .and().formLogin()
             .loginPage("/login")
             .authenticationSuccessHandler(redirectSuccessHandler()).and().logout()
