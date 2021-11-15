@@ -1,5 +1,6 @@
 package hu.nagygm.server.consent
 
+import hu.nagygm.oauth2.client.registration.GrandRequestStates
 import hu.nagygm.oauth2.client.registration.GrantRequest
 import hu.nagygm.oauth2.client.registration.GrantRequestService
 import hu.nagygm.oauth2.server.handler.AuthorizationHandler
@@ -7,13 +8,10 @@ import hu.nagygm.server.security.AppUserRepository
 import hu.nagygm.server.security.UserService
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.annotation.Id
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.mapping.Document
-import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.*
@@ -21,77 +19,57 @@ import java.util.*
 @Service
 class ConsentServiceImpl(
     @Autowired val userService: UserService,
-    @Autowired val consentRepository: ConsentRepository,
     @Autowired val appUserRepository: AppUserRepository,
-    @Autowired val grantRequestService: GrantRequestService,
-    @Autowired val reactiveMongoTemplate: ReactiveMongoTemplate
+    @Autowired val grantRequestService: GrantRequestService
 ) : ConsentService {
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96)
 
-    override suspend fun createConsent(grantRequestId: String, clientId: String): ConsentEntity {
+    override suspend fun createConsent(grantRequestId: String, clientId: String): ConsentPageResponse {
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
         val appUserDetails = appUserRepository.findByUsername(user.username)
-        val granRequest = grantRequestService.getGrantRequestByIdAndClientId(grantRequestId, clientId)
-        return reactiveMongoTemplate.insert(
-            ConsentEntity(
-                null,
-                granRequest.scopes,
-                granRequest.clientId,
-                appUserDetails.id,
-                Instant.now(),
-                null,
-                null,
-                granRequest.redirectUri,
-                granRequest.id!!
-            )
-        ).awaitFirst()
+        val grantRequest = grantRequestService.getGrantRequestByIdAndClientId(grantRequestId, clientId)
+        grantRequest.requestState = GrandRequestStates.ConsentRequested.code
+        grantRequest.associatedUserId = appUserDetails.id
+        grantRequest.consentRequestedAt = Instant.now()
+        grantRequest.processedAt = null
+        grantRequestService.save(grantRequest)
+        return ConsentPageResponse(grantRequest.id, grantRequest.scopes, grantRequest.redirectUri, grantRequest.clientId)
     }
 
-    override suspend fun processConsent(id: String, accept: Boolean): ConsentResponse {
+    override suspend fun processConsent(id: String, accept: Boolean, acceptedScopes: Set<String>): ConsentProcessResponse {
+        require(id.isNotEmpty()) { "ID can't be empty" }
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
         val appUserDetails = appUserRepository.findByUsername(user.username)
-        val consent = consentRepository.findByIdAndUserId(id, appUserDetails.id)
-        consent.accepted = accept
-        consent.answeredAt = Instant.now()
-        consentRepository.save(consent).awaitFirst()
-        val grantRequest = grantRequestService.getGrantRequestByIdAndClientId(consent.grantRequestId, consent.clientId)
+
+        val grantRequest = grantRequestService.getGrantRequestById(id, appUserDetails.id)
         return if (accept) {
             grantRequest.code = codeGenerator.generateKey()
             grantRequest.codeCreatedAt = Instant.now()
             grantRequestService.save(grantRequest)
-            ConsentResponse("${consent.redirectUrl}?code=${grantRequest.code}&state=${grantRequest.state}")
+            ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.CODE}=${grantRequest.code}&${OAuth2ParameterNames.STATE}=${grantRequest.state}")
         } else {
-            ConsentResponse("${consent.redirectUrl}?error=${OAuth2ErrorCodes.ACCESS_DENIED}")
+
+            grantRequestService.save(grantRequest)
+            ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.ACCESS_DENIED}")
         }
     }
 
 }
 
 interface ConsentService {
-    suspend fun createConsent(grantRequestId: String, clientId: String): ConsentEntity
-    suspend fun processConsent(id: String, accept: Boolean): ConsentResponse
+    suspend fun createConsent(grantRequestId: String, clientId: String): ConsentPageResponse
+    suspend fun processConsent(id: String, accept: Boolean, acceptedScopes: Set<String>): ConsentProcessResponse
 }
 
-interface ConsentRepository : ReactiveMongoRepository<ConsentEntity, String> {
-    suspend fun findByIdAndUserId(id: String, userId: String): ConsentEntity
-}
-
-@Document
-data class ConsentEntity(
-    @Id
+data class ConsentPageResponse(
     var id: String?,
     val scopes: Set<String>,
-    val clientId: String,
-    val userId: String,
-    val createdAt: Instant,
-    var answeredAt: Instant?,
-    var accepted: Boolean?,
     val redirectUrl: String,
-    val grantRequestId: String
+    val clientId: String
 )
 
-data class ConsentResponse(
+data class ConsentProcessResponse(
     val redirectUri: String
 )
 
@@ -107,7 +85,12 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
                 null,
                 null,
                 request.state ?: "",
-                null
+                null,
+                GrandRequestStates.Created.code,
+                emptySet(),
+                null,
+                null,
+                null,
             )
         ).awaitFirst()
     }
@@ -123,6 +106,12 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
     override suspend fun getGrantRequestByCodeAndClientId(code: String, clientId: String): GrantRequest {
         return grantRequestRepository.getByCodeAndAndClientId(code, clientId)
     }
+
+    override suspend fun getGrantRequestById(id: String, appUserId: String): GrantRequest {
+        return grantRequestRepository.getByIdAndAssociatedUserId(id, appUserId)
+    }
+
+
 
 }
 

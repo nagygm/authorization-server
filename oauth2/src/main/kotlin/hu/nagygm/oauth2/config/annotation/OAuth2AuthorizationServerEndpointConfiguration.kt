@@ -20,10 +20,10 @@ import org.springframework.web.reactive.function.server.coRouter
  */
 @Configuration
 @ComponentScan(basePackages = ["hu.nagygm.oauth2.**"])
-open class OAuth2AuthorizationServerEndpointConfiguration {
+class OAuth2AuthorizationServerEndpointConfiguration {
 
     @Bean
-    open fun coRoute(@Autowired authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter() {
+    fun coRoute(@Autowired authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter() {
         accept(MediaType.APPLICATION_JSON).nest {
 //            GET(Endpoint.TOKEN.path).invoke(tokenHandler::acquireToken)
             POST(Endpoint.TOKEN.path).invoke(tokenHandler::acquireToken)
@@ -33,7 +33,7 @@ open class OAuth2AuthorizationServerEndpointConfiguration {
     }
 
     @Bean("tokenJsonMapper")
-    open fun tokenJsonMapper(): ObjectMapper {
+    fun tokenJsonMapper(): ObjectMapper {
         return ObjectMapper().registerModule(ParameterNamesModule())
             .registerModule(Jdk8Module())
             .registerModule(JavaTimeModule())

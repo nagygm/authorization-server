@@ -11,6 +11,8 @@ import com.nimbusds.jose.crypto.MACSigner
 import hu.nagygm.oauth2.client.OAuth2Authorization
 import hu.nagygm.oauth2.client.OAuth2AuthorizationRepository
 import hu.nagygm.oauth2.client.registration.*
+import hu.nagygm.oauth2.util.completeAndJoinChildren
+import kotlinx.coroutines.*
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -18,6 +20,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator
 import org.springframework.security.oauth2.core.*
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames
 import org.springframework.stereotype.Service
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
@@ -27,7 +30,7 @@ import java.util.*
 
 
 @Service
-open class TokenHandler(
+class TokenHandler(
     @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
     @Autowired val grantRequestService: GrantRequestService,
     @Autowired val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository,
@@ -47,34 +50,52 @@ open class TokenHandler(
 
     private suspend fun validate(request: TokenRequest): TokenResponse {
         if (request.grantType == AuthorizationGrantType.AUTHORIZATION_CODE.value) {
-            if (!request.code.isNullOrBlank() && !request.clientId.isNullOrBlank()) {
-                val clientRegistration = clientRegistrationRepository.findByClientId(request.clientId)
-                val grantRequest = grantRequestService.getGrantRequestByCodeAndClientId(request.code, request.clientId)
-                if (clientRegistration == null) {
-                    throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT)))
-                }
-                if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.AUTHORIZATION_CODE) &&
-                    grantRequest.redirectUri != request.redirectUri
-                ) {
-                    throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
-                }
-                if (Instant.now().isBefore(grantRequest.codeCreatedAt?.plusSeconds(600L))) {
-                    return generateToken(request, clientRegistration, grantRequest)
-                } else {
-                    throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
-                }
-            } else {
-                throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT)))
-            }
+            return validateAuthorizationGrantType(request)
         } else {
             throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_GRANT_TYPE))
         }
     }
 
+    private suspend fun validateAuthorizationGrantType(request: TokenRequest): TokenResponse {
+        if (!request.code.isNullOrBlank() && !request.clientId.isNullOrBlank()) {
+            val fetchClientdataJobs = Job()
+            fetchClientdataJobs.plus(Dispatchers.IO)
+            var clientRegistration = withContext(fetchClientdataJobs) {
+                return@withContext async { clientRegistrationRepository.findByClientId(request.clientId) }
+            }.await()
+            var grantRequest = withContext(fetchClientdataJobs) {
+                return@withContext async {
+                    grantRequestService.getGrantRequestByCodeAndClientId(
+                        request.code,
+                        request.clientId
+                    )
+                }
+            }.await()
+
+            fetchClientdataJobs.completeAndJoinChildren()
+
+            if (clientRegistration == null) {
+                throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT)))
+            }
+            if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.AUTHORIZATION_CODE) &&
+                grantRequest.redirectUri != request.redirectUri
+            ) {
+                throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
+            }
+            if (Instant.now().isBefore(grantRequest.codeCreatedAt?.plusSeconds(600L))) {
+                return generateToken(clientRegistration, grantRequest)
+            } else {
+                throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
+            }
+        } else {
+            throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT)))
+        }
+    }
+
     private suspend fun generateToken(
-        tokenRequest: TokenRequest,
         clientRegistration: ClientRegistration,
-        grantRequest: GrantRequest
+        grantRequest: GrantRequest,
+
     ): TokenResponse {
         val now = Instant.now()
         val accessToken = OAuth2AccessToken(
@@ -99,11 +120,11 @@ open class TokenHandler(
         return TokenResponse(jwtEncoder(accessToken),
             OAuth2AccessToken.TokenType.BEARER.value,
             3600,
-            grantRequest.scopes.reduce { s1, s2 -> "$s1 $s2" }
+            grantRequest.scopes.reduce { s1, s2 -> "$s1 $s2" },
         )
     }
 
-    private suspend fun jwtEncoder(token: OAuth2AccessToken): String {
+    private fun jwtEncoder(token: OAuth2AccessToken): String {
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         val jwsObject = JWSObject(
             JWSHeader(JWSAlgorithm.HS256),
@@ -117,20 +138,27 @@ open class TokenHandler(
         return jwsObject.serialize(false)
     }
 
-    private suspend fun formToTokenRequest(map: MultiValueMap<String, String>): TokenRequest {
+    private fun formToTokenRequest(map: MultiValueMap<String, String>): TokenRequest {
         return TokenRequest(
             map.getFirst(OAuth2ParameterNames.GRANT_TYPE),
             map.getFirst(OAuth2ParameterNames.CODE),
             map.getFirst(OAuth2ParameterNames.REDIRECT_URI),
             map.getFirst(OAuth2ParameterNames.CLIENT_ID),
+            map.getFirst(PkceParameterNames.CODE_VERIFIER)
         )
     }
 
     data class TokenRequest(
+        @field:JsonProperty("grant_type")
         val grantType: String?,
+        @field:JsonProperty("code")
         val code: String?,
+        @field:JsonProperty("redirect_uri")
         val redirectUri: String?,
-        val clientId: String?
+        @field:JsonProperty("client_id")
+        val clientId: String?,
+        @field:JsonProperty("code_verifier")
+        val codeVerifier: String?
     )
 
     data class TokenResponse(

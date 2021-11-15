@@ -187,7 +187,7 @@ open class AuthorizationHandler(
             object SupportedResponseTypesRegistry {
                 val responseTypes: Map<String, AuthorizationGrantType> = hashMapOf(
                     OAuth2AuthorizationResponseType.CODE.value to AuthorizationGrantType.AUTHORIZATION_CODE,
-                    OAuth2AuthorizationResponseType.TOKEN.value to AuthorizationGrantType.IMPLICIT
+//                    OAuth2AuthorizationResponseType.TOKEN.value to AuthorizationGrantType.IMPLICIT
                 )
 
                 fun contains(responseType: String): Boolean {

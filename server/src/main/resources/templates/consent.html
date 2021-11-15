@@ -15,31 +15,34 @@
   Scopes:
 </p>
 
-<ul>
-  <div th:each="scope : ${consent.scopes}">
-    <li>
-      <span th:text="${scope}"></span>
-    </li>
-  </div>
-</ul>
 
 <form th:action="@{/consent}" method="post" id="consentForm" name="consentForm" th:object="${consentFormRequest}">
+  <ul>
+    <div th:each="scope : ${consent.scopes}">
+      <li>
+        <input type="checkbox" th:id="${scope}" name="scopes" th:value="${scope}">
+        <label th:for="${scope}" th:text="${scope}"/>
+      </li>
+    </div>
+  </ul>
   <input type="submit" value="Accept" onclick="acceptFunction()"/>
   <input type="submit" value="Reject" onclick="rejectFunction()"/>
-  <input type="hidden" id="consentAccepted" value=false th:name="consentAccepted"/>
-  <input type="hidden" id="consentId" th:value="${consent.id}" th:name="consentId">
-<!--  <input type="hidden" th:name="${_csrf.parameterName}"-->
-<!--         th:value="${_csrf.token}"/>-->
+  <input type="hidden" id="consentAccepted" th:value="${false}" th:name="consentAccepted"/>
+  <input type="hidden" id="id" th:value="${consent.id}" th:name="id">
+  <!--  <input type="hidden" th:name="${_csrf.parameterName}"-->
+  <!--         th:value="${_csrf.token}"/>-->
 </form>
 <script>
   function acceptFunction() {
     let form = document.getElementById("consentForm");
     form.elements.consentAccepted.value = true
+    form.elements.acceptedScopes.value = form.elements.scopes.value
   }
 
   function rejectFunction() {
     let form = document.getElementById("consentForm");
     form.elements.consentAccepted.value = false
+    form.elements.acceptedScopes.value = []
   }
 
 </script>

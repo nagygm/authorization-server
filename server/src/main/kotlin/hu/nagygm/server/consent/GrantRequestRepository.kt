@@ -9,6 +9,7 @@ import java.time.Instant
 interface GrantRequestRepository : ReactiveMongoRepository<GrantRequestEntity, String> {
     suspend fun getByIdAndClientId(id: String, clientId: String): GrantRequestEntity
     suspend fun getByCodeAndAndClientId(code: String, clientId: String): GrantRequestEntity
+    suspend fun getByIdAndAssociatedUserId(id: String, appUserId: String): GrantRequestEntity
 }
 
 @Document
@@ -22,6 +23,11 @@ class GrantRequestEntity(
     override var code: String?,
     override val state: String,
     override var codeCreatedAt: Instant?,
+    override var requestState: String,
+    override var acceptedScopes: Set<String>,
+    override var associatedUserId: String?,
+    override var consentRequestedAt: Instant?,
+    override var processedAt: Instant?
 ) : GrantRequest {
     constructor(grantRequest: GrantRequest) : this(
         grantRequest.redirectUri,
@@ -31,6 +37,11 @@ class GrantRequestEntity(
         grantRequest.id,
         grantRequest.code,
         grantRequest.state,
-        grantRequest.codeCreatedAt
+        grantRequest.codeCreatedAt,
+        grantRequest.requestState,
+        grantRequest.acceptedScopes,
+        grantRequest.associatedUserId,
+        grantRequest.consentRequestedAt,
+        grantRequest.processedAt
     )
 }

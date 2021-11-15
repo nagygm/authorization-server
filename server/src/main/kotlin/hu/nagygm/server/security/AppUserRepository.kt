@@ -19,3 +19,4 @@ data class AppUser(
     val credentialsNonExpired: Boolean,
     val enabled: Boolean
 )
+

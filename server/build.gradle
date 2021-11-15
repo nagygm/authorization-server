@@ -1,6 +1,5 @@
 plugins {
     id 'hu.nagygm.authorization-server.kotlin-application-conventions'
-    id "org.jetbrains.kotlin.plugin.spring" version "1.5.31"
 
 }
 

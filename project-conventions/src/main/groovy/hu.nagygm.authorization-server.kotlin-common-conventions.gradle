@@ -7,6 +7,7 @@ plugins {
     id "org.jetbrains.kotlin.plugin.allopen"
     id("io.gitlab.arturbosch.detekt")
     id 'info.solidsoft.pitest'
+    id "org.jetbrains.kotlin.plugin.spring"
 }
 
 repositories {
@@ -22,6 +23,8 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactive'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor'
+    implementation 'io.projectreactor.kotlin:reactor-kotlin-extensions'
     implementation "io.konform:konform-jvm:${project.ext.dep.konform}"
 
 
@@ -74,3 +77,6 @@ pitest {
     failWhenNoMutations = false
 }
 
+compileKotlin {
+    kotlinOptions.jvmTarget = "11"
+}

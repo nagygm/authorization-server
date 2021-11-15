@@ -1,6 +1,5 @@
 package hu.nagygm.server
 
-import hu.nagygm.server.web.UserController
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.extensions.spring.SpringExtension
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,4 +25,12 @@ class UserControllerTest : AnnotationSpec() {
             .expectStatus().isFound.expectHeader()
             .location("/login")
     }
+
+    @Test
+    fun `When authenticated consent page should return 200 OK`() {
+        client.get().uri("/consent").exchange()
+            .expectStatus().isOk
+    }
+
+
 }

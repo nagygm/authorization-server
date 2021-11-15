@@ -4,7 +4,7 @@ import org.springframework.stereotype.Repository
 import java.util.concurrent.ConcurrentHashMap
 
 @Repository
-open class InMemoryOAuth2AuthorizationRepositoryImpl : OAuth2AuthorizationRepository {
+class InMemoryOAuth2AuthorizationRepositoryImpl : OAuth2AuthorizationRepository {
     private val authorizations: MutableMap<String, OAuth2Authorization> = ConcurrentHashMap()
 
     override suspend fun findById(id: String): OAuth2Authorization? {

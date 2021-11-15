@@ -17,7 +17,9 @@ enum class Endpoint(val path: String) {
     JWKS_URI("/openid_configuration/jwks");
 }
 
-enum class ChallengeMethods(val value: String) {
+//PkceParameterNames
+
+enum class CodeChallengeMethods(val value: String) {
     PLAIN("plain"),
     S256("s256"),
 }

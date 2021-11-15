@@ -8,6 +8,8 @@ import org.springframework.security.core.userdetails.MapReactiveUserDetailsServi
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter
@@ -16,7 +18,7 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 
 
 @Configuration
-open class BasicSecurityConfiguration {
+class BasicSecurityConfiguration {
 
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain? {
@@ -43,11 +45,17 @@ open class BasicSecurityConfiguration {
         return RedirectServerAuthenticationSuccessHandler()
     }
 
+//    @Bean
+//    fun userDetailsService(): ReactiveUserDetailsService {
+//        val user: UserDetails = User.withDefaultPasswordEncoder()
+//            .username("user").password("user").roles("USER")
+//            .build()
+//        return MapReactiveUserDetailsService(user)
+//    }
+
     @Bean
-    fun userDetailsService(): ReactiveUserDetailsService {
-        val user: UserDetails = User.withDefaultPasswordEncoder()
-            .username("user").password("user").roles("USER")
-            .build()
-        return MapReactiveUserDetailsService(user)
+    fun passwordEncoder(): PasswordEncoder {
+        //TODO add dynamic bcrypt strength increase and rehash on login when original strength is low
+        return BCryptPasswordEncoder(12)
     }
 }
