@@ -17,15 +17,19 @@ enum class CodeChallengeMethods(val value: String) {
 
     companion object {
         fun isValid(value: String): Boolean {
-            return value == PLAIN.value || value == S256.value
+            return value.equals(PLAIN.value, true) || value.equals(S256.value, true)
         }
 
         fun fromString(value: String): CodeChallengeMethods {
-            return when (value) {
+            return when (value.lowercase()) {
                 PLAIN.value -> PLAIN
                 S256.value -> S256
                 else -> throw IllegalArgumentException("Invalid code challenge method: $value")
             }
+        }
+
+        fun equals(method: CodeChallengeMethods, value: String): Boolean {
+            return method.value.equals(value, true)
         }
     }
 }

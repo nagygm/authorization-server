@@ -124,7 +124,7 @@ class TokenHandler(
             if (tokenRequest.codeVerifier == null || tokenRequest.codeVerifier.isEmpty() || !matcher.matches()) {
                 return false
             }
-            return when (grantRequest.codeChallengeMethod) {
+            return when (grantRequest.codeChallengeMethod!!.lowercase()) {
                 CodeChallengeMethods.S256.value -> {
                     val digestedCodeChallenge: String = CodeVerifier.processCodeChallenge(tokenRequest.codeVerifier)
                     grantRequest.codeChallenge == digestedCodeChallenge
