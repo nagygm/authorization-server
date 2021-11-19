@@ -1,6 +1,11 @@
 package hu.nagygm.oauth2.server.handler
 
 import hu.nagygm.oauth2.client.registration.*
+import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.basePathV1
+import hu.nagygm.oauth2.server.GrantRequest
+import hu.nagygm.oauth2.server.GrantRequestService
+import hu.nagygm.oauth2.server.security.pkce.CodeChallengeMethods
+import hu.nagygm.oauth2.server.security.pkce.CodeVerifier
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
@@ -8,13 +13,14 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.core.*
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames
 import org.springframework.stereotype.Service
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.awaitBody
 import java.net.MalformedURLException
 import java.net.URL
+import java.util.regex.Matcher
 
 
 /**
@@ -52,41 +58,41 @@ unrecognized request parameters.  Request and response parameters
 MUST NOT be included more than once.
  */
 @Service
-open class AuthorizationHandler(
+class AuthorizationHandler(
     @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
     @Autowired val grantRequestService: GrantRequestService
 ) {
 
+
     suspend fun authorize(serverRequest: ServerRequest): ServerResponse {
-        val request = requestToAuthorizationRequest(serverRequest)
+        val request = AuthorizationRequest(serverRequest.queryParams())
         val grantRequest = try {
             AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository, grantRequestService).validate(request)
         } catch (ex: OAuth2AuthorizationException) {
             return ServerResponse.badRequest().body(mono { ex.error }, OAuth2Error::class.java).awaitFirst()
         }
-        val location = "/consent?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
+        //TODO move consent url to configuration
+        val location = "${basePathV1.oauth2}${basePathV1.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
 
         return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
     }
 
-    private suspend fun requestToAuthorizationRequest(request: ServerRequest): AuthorizationRequest {
-        val result = AuthorizationRequest(request.queryParams())
-        val headers: ServerRequest.Headers = request.headers()
-        val cache = request.exchange().session.cache().awaitFirst()
-        cache.attributes
-        result.clientSecret = headers.firstHeader("Authorization") ?:"" //TODO fix  not sending client secre,t spring security?
-        return result
-    }
-
     class AuthorizationRequest(parameters: MultiValueMap<String, String>) {
-        val clientId: String = parameters.getFirst(OAuth2ParameterNames.CLIENT_ID) ?: ""
-        val state: String? = parameters.getFirst(OAuth2ParameterNames.STATE)
-        val responseType: String = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE) ?: ""
-        var redirectUri: String = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
+        val clientId: String
+        val state: String?
+        val responseType: String
+        var redirectUri: String
         val scopes: Set<String>
-        var clientSecret: String = ""
+        val codeChallenge : String?
+        val codeChallengeMethod: String?
 
         init {
+            clientId = parameters.getFirst(OAuth2ParameterNames.CLIENT_ID) ?: ""
+            state = parameters.getFirst(OAuth2ParameterNames.STATE)
+            responseType = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE) ?: ""
+            redirectUri = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI) ?: ""
+            codeChallenge = parameters.getFirst(PkceParameterNames.CODE_CHALLENGE)
+            codeChallengeMethod = parameters.getFirst(PkceParameterNames.CODE_CHALLENGE_METHOD)
 
             val inputScopes = parameters.getFirst(OAuth2ParameterNames.SCOPE)
 
@@ -106,13 +112,23 @@ open class AuthorizationHandler(
 
             suspend fun validate(authorizationRequest: AuthorizationRequest): GrantRequest {
 
+                if (!isCodeChallengeValid(authorizationRequest.codeChallenge, authorizationRequest.codeChallengeMethod)) {
+                    throw OAuth2AuthorizationException(
+                        OAuth2Error(
+                            OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Code challenge is invalid",
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
+                        )
+                    )
+                }
+
                 //----- VALIDATE RESPONSE TYPE TODO extract to business logic validator
                 if (authorizationRequest.responseType.isBlank()) {
                     throw OAuth2AuthorizationException(
                         OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
                             "Invalid parameter: ${OAuth2ParameterNames.RESPONSE_TYPE}",
-                            ""
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                         )
                     )
                 } else if (SupportedResponseTypesRegistry.notContains(authorizationRequest.responseType)) {
@@ -120,7 +136,7 @@ open class AuthorizationHandler(
                         OAuth2Error(
                             OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE,
                             "Unsupported response type: ${authorizationRequest.responseType}",
-                            ""
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                         )
                     )
                 }
@@ -131,25 +147,29 @@ open class AuthorizationHandler(
                         OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
                             "Invalid parameter: ${OAuth2ParameterNames.CLIENT_ID}",
-                            ""
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                         )
                     )
                 }
 
+                //TODO add property for authorized client flows
                 val registration =
-                    clientRegistrationRepository.findByClientIdAndSecret(authorizationRequest.clientId, authorizationRequest.clientSecret)
+                    clientRegistrationRepository.findByClientId(authorizationRequest.clientId)
                         ?: throw OAuth2AuthorizationException(
                             OAuth2Error(
                                 OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
                                 "Client not authorized: ${authorizationRequest.clientId}",
-                                ""
+                                "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                             )
                         )
-                if(!registration.authorizationGrantTypes.any {
-                    it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
-                }) {
+                if (!registration.authorizationGrantTypes.any {
+                        it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
+                    }) {
                     throw OAuth2AuthorizationException(
-                        OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)
+                        OAuth2Error(
+                            OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client is not to authorize with this response type",
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
+                        )
                     )
                 }
 
@@ -169,10 +189,10 @@ open class AuthorizationHandler(
                     )
                 }
 
-
                 if (authorizationRequest.redirectUri.isBlank()) authorizationRequest.redirectUri = registration.redirectUris.first()
                 return grantRequestService.saveGrantRequest(authorizationRequest)
             }
+
 
             private fun validateUri(uri: String): Boolean {
                 try {
@@ -183,11 +203,37 @@ open class AuthorizationHandler(
                 return true
             }
 
+            private fun isCodeChallengeValid(codeChallenge: String?, codeChallengeMethod: String?): Boolean {
+                if (codeChallenge == null) {
+                    // As for oauth2.1 draft recommendation sha256 code_challenge should be mandatory
+                    return true
+                } else {
+                    if(codeChallengeMethod != null) {
+                        // https://tools.ietf.org/html/rfc7636#section-4.2
+                        if (!CodeChallengeMethods.isValid(codeChallengeMethod)) {
+                            throw OAuth2AuthorizationException(
+                                OAuth2Error(
+                                    OAuth2ErrorCodes.INVALID_REQUEST,
+                                    "Invalid parameter: ${PkceParameterNames.CODE_CHALLENGE_METHOD}",
+                                    ""
+                                )
+                            )
+                        }
+                    }
+
+                    // check the format and length of the code_challenge
+                    val matcher: Matcher = CodeVerifier.CODE_CHALLENGE_PATTERN.matcher(codeChallenge);
+                    if(matcher.matches()) {
+                        return true
+                    }
+                    return false
+                }
+            }
+
             //TODO to util class
             object SupportedResponseTypesRegistry {
-                val responseTypes: Map<String, AuthorizationGrantType> = hashMapOf(
+                private val responseTypes: Map<String, AuthorizationGrantType> = hashMapOf(
                     OAuth2AuthorizationResponseType.CODE.value to AuthorizationGrantType.AUTHORIZATION_CODE,
-//                    OAuth2AuthorizationResponseType.TOKEN.value to AuthorizationGrantType.IMPLICIT
                 )
 
                 fun contains(responseType: String): Boolean {

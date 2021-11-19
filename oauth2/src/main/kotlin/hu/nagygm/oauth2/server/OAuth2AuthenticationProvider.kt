@@ -16,7 +16,7 @@ open class OAuth2AuthenticationProvider(
 
     override fun authenticate(authentication: Authentication?): Authentication {
         checkNotNull(authentication) { "Authentication must not be null!" }
-        TODO("add client login repository for machine and ip authorization, Implement provider to use spring securit")
+        TODO("add client login repository for machine and ip authorization, Implement provider to use spring security")
     }
 
     override fun supports(authentication: Class<*>?): Boolean {

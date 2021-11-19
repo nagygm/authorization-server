@@ -1,6 +1,7 @@
 package hu.nagygm.server.web
 
 import hu.nagygm.server.consent.ConsentService
+import io.swagger.v3.oas.annotations.media.Schema
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
@@ -18,7 +19,7 @@ class RestUserController(
 ) {
     @RequestMapping(
         method = [RequestMethod.POST],
-        path = ["/consent"],
+        path = ["/oauth2/v1/consent"],
     )
     @ResponseStatus(HttpStatus.FOUND)
     suspend fun postConsent(form: ConsentFormRequest): ResponseEntity<Void> {
@@ -35,9 +36,15 @@ class RestUserController(
         ).build()
     }
 
-    class ConsentFormRequest(
-        var consentAccepted: Boolean,
-        var id: String,
-        var acceptedScopes: Set<String>,
+    @Schema(
+        description = "Consent form request",
+    )
+    data class ConsentFormRequest(
+        @Schema(description = "If the consent was accepted or not.", required = true)
+        val consentAccepted: Boolean,
+        @Schema(description = "The ID of the consent request.", required = true)
+        val id: String,
+        @Schema(description = "A partial or full set of accepted scopes from the access token request", required = true)
+        val acceptedScopes: Set<String>,
     )
 }

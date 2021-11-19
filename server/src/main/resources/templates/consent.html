@@ -16,14 +16,12 @@
 </p>
 
 
-<form th:action="@{/consent}" method="post" id="consentForm" name="consentForm" th:object="${consentFormRequest}">
-  <ul>
-    <div th:each="scope : ${consent.scopes}">
-      <li>
-        <input type="checkbox" th:id="${scope}" name="scopes" th:value="${scope}">
-        <label th:for="${scope}" th:text="${scope}"/>
-      </li>
-    </div>
+<form th:action='@{/oauth2/v1/consent}' method="post" id="consentForm" name="consentForm" th:object="${consentFormRequest}">
+  <ul th:each="scope : ${consent.scopes}">
+    <li>
+      <input type="checkbox" th:id="${scope}" name="acceptedScopes" th:value="${scope}">
+      <label th:for="${scope}" th:text="${scope}"/>
+    </li>
   </ul>
   <input type="submit" value="Accept" onclick="acceptFunction()"/>
   <input type="submit" value="Reject" onclick="rejectFunction()"/>
@@ -36,7 +34,7 @@
   function acceptFunction() {
     let form = document.getElementById("consentForm");
     form.elements.consentAccepted.value = true
-    form.elements.acceptedScopes.value = form.elements.scopes.value
+    form.elements.acceptedScopes.value = Array.from(form.elements.scopes).filter(it => it.checked).map(it => it.value)
   }
 
   function rejectFunction() {

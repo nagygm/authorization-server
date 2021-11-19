@@ -13,7 +13,7 @@ import org.springframework.web.server.ServerWebExchange
 class UserController(
     @Autowired val consentService: ConsentService
 ) {
-    @GetMapping("/consent")
+    @GetMapping("/oauth2/v1/consent")
     suspend fun getConsentPage(
         @RequestParam("grant_request_id") grantRequestId: String,
         @RequestParam("client_id") clientId: String,

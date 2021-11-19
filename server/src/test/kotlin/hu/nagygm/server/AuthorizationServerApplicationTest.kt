@@ -7,6 +7,7 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.shouldBe
 import org.springframework.boot.test.context.SpringBootTest
 
+
 @SpringBootTest
 class AuthorizationServerApplicationTest : AnnotationSpec() {
     override fun extensions() = listOf(SpringExtension)
@@ -18,7 +19,6 @@ class AuthorizationServerApplicationTest : AnnotationSpec() {
         ccm.put(ClientConfigurationParamKeys.AccessTokenLifetime, 1)
         ccm.get(ClientConfigurationParamKeys.AccessTokenLifetime).plus(1) shouldBe 2
     }
-
 
 }
 

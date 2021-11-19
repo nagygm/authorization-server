@@ -13,5 +13,4 @@ data class ClientRegistration(
     val authorizationGrantTypes: Set<AuthorizationGrantType>,
     val scopes: Set<String>,
     val clientConfiguration: Map<ClientConfigurationParams, Any>,
-//    val clientConfigurationMap: ClientConfigurationMap
 )

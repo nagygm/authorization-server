@@ -19,10 +19,7 @@ enum class Endpoint(val path: String) {
 
 //PkceParameterNames
 
-enum class CodeChallengeMethods(val value: String) {
-    PLAIN("plain"),
-    S256("s256"),
-}
+
 
 enum class TokenType(val value: String) {
     ACCESS_TOKEN("access_token"),

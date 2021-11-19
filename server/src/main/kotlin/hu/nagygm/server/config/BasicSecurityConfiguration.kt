@@ -1,13 +1,9 @@
 package hu.nagygm.server.config
 
-import hu.nagygm.oauth2.core.Endpoint
+import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.*
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.web.server.ServerHttpSecurity
-import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
-import org.springframework.security.core.userdetails.ReactiveUserDetailsService
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -25,11 +21,11 @@ class BasicSecurityConfiguration {
         http
             .csrf().requireCsrfProtectionMatcher(NegatedServerWebExchangeMatcher { exchange ->
                 ServerWebExchangeMatchers.pathMatchers(
-                    "/authorize**", "/token**", "/login**", "/consent**"
+                    "${basePathV1.oauth2}/**", "/login**", "/consent**", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html"
                 ).matches(exchange)
             }).and()
             .authorizeExchange()
-            .pathMatchers("${Endpoint.AUTHORIZATION.path}**", "${Endpoint.TOKEN.path}**", "/favicon.ico", "/login")
+            .pathMatchers("${basePathV1.oauth2}/**", "/favicon.ico", "/login", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html")
             .permitAll().and()
             .authorizeExchange()
             .anyExchange().authenticated()

@@ -1,8 +1,8 @@
 package hu.nagygm.server.consent
 
-import hu.nagygm.oauth2.client.registration.GrandRequestStates
-import hu.nagygm.oauth2.client.registration.GrantRequest
-import hu.nagygm.oauth2.client.registration.GrantRequestService
+import hu.nagygm.oauth2.server.GrantRequestStates
+import hu.nagygm.oauth2.server.GrantRequest
+import hu.nagygm.oauth2.server.GrantRequestService
 import hu.nagygm.oauth2.server.handler.AuthorizationHandler
 import hu.nagygm.server.security.AppUserRepository
 import hu.nagygm.server.security.UserService
@@ -29,7 +29,8 @@ class ConsentServiceImpl(
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
         val appUserDetails = appUserRepository.findByUsername(user.username)
         val grantRequest = grantRequestService.getGrantRequestByIdAndClientId(grantRequestId, clientId)
-        grantRequest.requestState = GrandRequestStates.ConsentRequested.code
+            ?: throw AccessDeniedException("Access denied: can't find grant request")
+        grantRequest.requestState = GrantRequestStates.ConsentRequested.code
         grantRequest.associatedUserId = appUserDetails.id
         grantRequest.consentRequestedAt = Instant.now()
         grantRequest.processedAt = null
@@ -37,19 +38,27 @@ class ConsentServiceImpl(
         return ConsentPageResponse(grantRequest.id, grantRequest.scopes, grantRequest.redirectUri, grantRequest.clientId)
     }
 
-    override suspend fun processConsent(id: String, accept: Boolean, acceptedScopes: Set<String>): ConsentProcessResponse {
-        require(id.isNotEmpty()) { "ID can't be empty" }
+    override suspend fun processConsent(grantRequestId: String, accept: Boolean, acceptedScopes: Set<String>): ConsentProcessResponse {
+        require(grantRequestId.isNotEmpty()) { "ID can't be empty" }
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
+        //TODO refactor checks and responses to library
         val appUserDetails = appUserRepository.findByUsername(user.username)
 
-        val grantRequest = grantRequestService.getGrantRequestById(id, appUserDetails.id)
+        val grantRequest = grantRequestService.getGrantRequestById(grantRequestId, appUserDetails.id)
+            ?: throw AccessDeniedException("Access denied: can't find grant request")
+        if (!grantRequest.scopes.containsAll(acceptedScopes)) {
+            return ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.INVALID_SCOPE}")
+        }
         return if (accept) {
             grantRequest.code = codeGenerator.generateKey()
             grantRequest.codeCreatedAt = Instant.now()
+            grantRequest.acceptedScopes = acceptedScopes
+            grantRequest.requestState = GrantRequestStates.ConsentAccepted.code
             grantRequestService.save(grantRequest)
             ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.CODE}=${grantRequest.code}&${OAuth2ParameterNames.STATE}=${grantRequest.state}")
         } else {
-
+            grantRequest.acceptedScopes = emptySet()
+            grantRequest.requestState = GrantRequestStates.ConsentRejected.code
             grantRequestService.save(grantRequest)
             ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.ACCESS_DENIED}")
         }
@@ -86,16 +95,18 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
                 null,
                 request.state ?: "",
                 null,
-                GrandRequestStates.Created.code,
+                GrantRequestStates.Created.code,
                 emptySet(),
                 null,
                 null,
                 null,
+                request.codeChallenge,
+                request.codeChallengeMethod
             )
         ).awaitFirst()
     }
 
-    override suspend fun getGrantRequestByIdAndClientId(id: String, clientId: String): GrantRequest {
+    override suspend fun getGrantRequestByIdAndClientId(id: String, clientId: String): GrantRequest? {
         return grantRequestRepository.getByIdAndClientId(id, clientId)
     }
 
@@ -103,15 +114,12 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
         return grantRequestRepository.save(GrantRequestEntity(grantRequest)).awaitFirst()
     }
 
-    override suspend fun getGrantRequestByCodeAndClientId(code: String, clientId: String): GrantRequest {
+    override suspend fun getGrantRequestByCodeAndClientId(code: String, clientId: String): GrantRequest? {
         return grantRequestRepository.getByCodeAndAndClientId(code, clientId)
     }
 
-    override suspend fun getGrantRequestById(id: String, appUserId: String): GrantRequest {
+    override suspend fun getGrantRequestById(id: String, appUserId: String): GrantRequest? {
         return grantRequestRepository.getByIdAndAssociatedUserId(id, appUserId)
     }
-
-
-
 }
 

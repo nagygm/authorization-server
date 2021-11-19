@@ -1,15 +1,15 @@
 package hu.nagygm.server.consent
 
-import hu.nagygm.oauth2.client.registration.GrantRequest
+import hu.nagygm.oauth2.server.GrantRequest
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import java.time.Instant
 
 interface GrantRequestRepository : ReactiveMongoRepository<GrantRequestEntity, String> {
-    suspend fun getByIdAndClientId(id: String, clientId: String): GrantRequestEntity
-    suspend fun getByCodeAndAndClientId(code: String, clientId: String): GrantRequestEntity
-    suspend fun getByIdAndAssociatedUserId(id: String, appUserId: String): GrantRequestEntity
+    suspend fun getByIdAndClientId(id: String, clientId: String): GrantRequestEntity?
+    suspend fun getByCodeAndAndClientId(code: String, clientId: String): GrantRequestEntity?
+    suspend fun getByIdAndAssociatedUserId(id: String, appUserId: String): GrantRequestEntity?
 }
 
 @Document
@@ -27,7 +27,9 @@ class GrantRequestEntity(
     override var acceptedScopes: Set<String>,
     override var associatedUserId: String?,
     override var consentRequestedAt: Instant?,
-    override var processedAt: Instant?
+    override var processedAt: Instant?,
+    override var codeChallenge: String?,
+    override var codeChallengeMethod: String?
 ) : GrantRequest {
     constructor(grantRequest: GrantRequest) : this(
         grantRequest.redirectUri,
@@ -42,6 +44,8 @@ class GrantRequestEntity(
         grantRequest.acceptedScopes,
         grantRequest.associatedUserId,
         grantRequest.consentRequestedAt,
-        grantRequest.processedAt
+        grantRequest.processedAt,
+        grantRequest.codeChallenge,
+        grantRequest.codeChallengeMethod
     )
 }
