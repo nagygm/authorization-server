@@ -21,11 +21,11 @@ class BasicSecurityConfiguration {
         http
             .csrf().requireCsrfProtectionMatcher(NegatedServerWebExchangeMatcher { exchange ->
                 ServerWebExchangeMatchers.pathMatchers(
-                    "${basePathV1.oauth2}/**", "/login**", "/consent**", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html"
+                    "${basePathV1.oauth2}/**", "/login**", "/consent**", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html", *tempAuthOverride()
                 ).matches(exchange)
             }).and()
             .authorizeExchange()
-            .pathMatchers("${basePathV1.oauth2}/**", "/favicon.ico", "/login", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html")
+            .pathMatchers("${basePathV1.oauth2}/**", "/favicon.ico", "/login", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui.html", *tempAuthOverride())
             .permitAll().and()
             .authorizeExchange()
             .anyExchange().authenticated()
@@ -39,6 +39,11 @@ class BasicSecurityConfiguration {
 
     private fun redirectSuccessHandler(): RedirectServerAuthenticationSuccessHandler {
         return RedirectServerAuthenticationSuccessHandler()
+    }
+
+    private fun tempAuthOverride() : Array<String> {
+        //FIXME: remove this after role implementation
+        return arrayOf("${basePathV1.management}/**")
     }
 
 //    @Bean

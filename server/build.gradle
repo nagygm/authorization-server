@@ -1,6 +1,7 @@
 plugins {
     id 'hu.nagygm.authorization-server.kotlin-application-conventions'
-
+    id 'nu.studer.jooq' version '6.0.1'
+    id "org.flywaydb.flyway" version "8.2.0"
 }
 
 group 'hu.nagygm'
@@ -20,6 +21,10 @@ sourceSets {
 
 configurations.integrationTestImplementation.extendsFrom configurations.testImplementation
 
+configurations {
+    flywayMigration
+}
+
 dependencies {
     implementation project(':oauth2')
     implementation "org.springframework.boot:spring-boot-starter-webflux"
@@ -34,6 +39,18 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactive'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    //postgresql
+    implementation "org.springframework.data:spring-data-r2dbc:${project.ext.dep.spring_data_r2dbc}"
+    implementation "io.r2dbc:r2dbc-postgresql:${project.ext.dep.r2dbc_postgresql}"
+
+    flywayMigration "org.postgresql:postgresql:${project.ext.dep.postgres}"
+
+    //TODO jooq needs more research for reactive
+//    implementation "org.jooq:jooq:${project.ext.dep.jooq}"
+//    implementation "org.postgresql:postgresql:${project.ext.dep.postgres}"
+//    jooqGenerator "org.postgresql:postgresql:${project.ext.dep.postgres}"
+
     testImplementation "org.springframework.boot:spring-boot-starter-test"
     integrationTestImplementation "org.springframework.boot:spring-boot-starter-test"
 }
@@ -45,4 +62,65 @@ task integrationTest(type: Test) {
 
 check.dependsOn integrationTest
 integrationTest.mustRunAfter test
+
+flyway {
+    url = "jdbc:postgresql://localhost:25432/authserver"
+    user = "authserver"
+    password = "authserver"
+    schemas = ['authserver']
+    configurations = ['flywayMigration']
+    locations = ["filesystem:db_migration"]
+}
+
+//jooq {
+//    version = "${project.ext.dep.jooq}"  // the default (can be omitted)
+//    configurations {
+//        main {
+//            generationTool {
+//                jdbc {
+//                    driver = 'org.postgresql.Driver'
+//                    url = 'jdbc:postgresql://localhost:25432/authserver'
+//                    user = 'authserver'
+//                    password = 'authserver'
+//                    properties {
+//                        property {
+//                            key = 'ssl'
+//                            value = 'false'
+//                        }
+//                    }
+//                }
+//                generator {
+//                    name = 'org.jooq.codegen.DefaultGenerator'
+//                    database {
+//                        name = 'org.jooq.meta.postgres.PostgresDatabase'
+//                        inputSchema = 'public'
+//                        forcedTypes {
+//                            forcedType {
+//                                name = 'varchar'
+//                                includeExpression = '.*'
+//                                includeTypes = 'JSONB?'
+//                            }
+//                            forcedType {
+//                                name = 'varchar'
+//                                includeExpression = '.*'
+//                                includeTypes = 'INET'
+//                            }
+//                        }
+//                    }
+//                    generate {
+//                        deprecated = false
+//                        records = true
+//                        immutablePojos = true
+//                        fluentSetters = true
+//                    }
+//                    target {
+//                        packageName = 'hu.nagygm.server.generated.jooq'
+//                        directory = 'build/generated-src/jooq/main'
+//                    }
+//                    strategy.name = 'org.jooq.codegen.DefaultGeneratorStrategy'
+//                }
+//            }
+//        }
+//    }
+//}
 

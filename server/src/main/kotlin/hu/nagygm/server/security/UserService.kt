@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono
 
 
 @Service
-class UserService(@Autowired val appUserRepository: AppUserRepository) : ReactiveUserDetailsService {
+class UserService(@Autowired val mongoAppUserRepository: MongoAppUserRepository) : ReactiveUserDetailsService {
 
     suspend fun getCurrentUser(): User? {
         return ReactiveSecurityContextHolder.getContext()
@@ -29,7 +29,7 @@ class UserService(@Autowired val appUserRepository: AppUserRepository) : Reactiv
     override fun findByUsername(username: String?): Mono<UserDetails> {
         requireNotNull(username)
         return mono {
-            val appUser = appUserRepository.findByUsername(username)
+            val appUser = mongoAppUserRepository.findByUsername(username)
             User(
                 appUser.username,
                 appUser.passwordHash,

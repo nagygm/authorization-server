@@ -1,26 +1,19 @@
-import logo from './logo.svg';
-import './App.css';
 import React from "react";
+import { Admin, Resource, ListGuesser } from 'react-admin';
+// import jsonServerProvider from 'ra-data-json-server';
+import {SpringDataProvider} from "./components/dataprovider";
+import UserIcon from '@material-ui/icons/People';
+import DeviceIcon from '@material-ui/icons/Devices'
+import AppsIcon from '@material-ui/icons/Apps'
+import {UserCreate, UserEdit, UserList} from "./users/users";
+import {ClientCreate, ClientEdit, ClientList} from "./clients/clients";
+import {ResourceCreate, ResourceEdit, ResourceList} from "./resources/resources";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
-
+const App = () => (
+    <Admin dataProvider={SpringDataProvider}>
+        <Resource name="users" list={UserList} edit={UserEdit} create={UserCreate} icon={UserIcon}/>
+        <Resource name="clients" icon={DeviceIcon} list={ClientList} create={ClientCreate} edit={ClientEdit}/>
+        <Resource name="resources" icon={AppsIcon} list={ResourceList} create={ResourceCreate} edit={ResourceEdit}/>
+    </Admin>
+);
 export default App;

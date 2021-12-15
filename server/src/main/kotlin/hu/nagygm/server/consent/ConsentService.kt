@@ -4,7 +4,7 @@ import hu.nagygm.oauth2.server.GrantRequestStates
 import hu.nagygm.oauth2.server.GrantRequest
 import hu.nagygm.oauth2.server.GrantRequestService
 import hu.nagygm.oauth2.server.handler.AuthorizationHandler
-import hu.nagygm.server.security.AppUserRepository
+import hu.nagygm.server.security.MongoAppUserRepository
 import hu.nagygm.server.security.UserService
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,7 +19,7 @@ import java.util.*
 @Service
 class ConsentServiceImpl(
     @Autowired val userService: UserService,
-    @Autowired val appUserRepository: AppUserRepository,
+    @Autowired val mongoAppUserRepository: MongoAppUserRepository,
     @Autowired val grantRequestService: GrantRequestService
 ) : ConsentService {
 
@@ -27,7 +27,7 @@ class ConsentServiceImpl(
 
     override suspend fun createConsent(grantRequestId: String, clientId: String): ConsentPageResponse {
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
-        val appUserDetails = appUserRepository.findByUsername(user.username)
+        val appUserDetails = mongoAppUserRepository.findByUsername(user.username)
         val grantRequest = grantRequestService.getGrantRequestByIdAndClientId(grantRequestId, clientId)
             ?: throw AccessDeniedException("Access denied: can't find grant request")
         grantRequest.requestState = GrantRequestStates.ConsentRequested.code
@@ -42,7 +42,7 @@ class ConsentServiceImpl(
         require(grantRequestId.isNotEmpty()) { "ID can't be empty" }
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
         //TODO refactor checks and responses to library
-        val appUserDetails = appUserRepository.findByUsername(user.username)
+        val appUserDetails = mongoAppUserRepository.findByUsername(user.username)
 
         val grantRequest = grantRequestService.getGrantRequestById(grantRequestId, appUserDetails.id)
             ?: throw AccessDeniedException("Access denied: can't find grant request")

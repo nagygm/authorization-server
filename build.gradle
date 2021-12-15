@@ -28,7 +28,12 @@ allprojects {
         junit: [bom:"5.8.1"],
         kotest: "4.6.3",
         kotest_extension: "1.0.1",
-        konform: "0.3.0"
+        konform: "0.3.0",
+        postgres: "42.2.14",
+        jooq: "3.15.5",
+        spring_data_r2dbc: "1.4.0",
+        r2dbc_postgresql: "0.8.10.RELEASE"
+
     ]
 
 }
