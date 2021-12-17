@@ -12,7 +12,7 @@ import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfi
 @RestController
 class RestResourceController {
 
-    @GetMapping(basePathV1.management + "/clients")
+    @GetMapping(basePathV1.management + "/resources")
     suspend fun get(): Page<ResourceDto> {
         return PageImpl(
             listOf(),
@@ -20,17 +20,17 @@ class RestResourceController {
         )
     }
 
-    @GetMapping(basePathV1.management + "/clients/{uuid}")
+    @GetMapping(basePathV1.management + "/resources/{uuid}")
     suspend fun getOne(@PathVariable uuid: UUID): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PostMapping(basePathV1.management + "/clients")
+    @PostMapping(basePathV1.management + "/resources")
     suspend fun create(@RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PutMapping(basePathV1.management + "/clients/{uuid}")
+    @PutMapping(basePathV1.management + "/resources/{uuid}")
     suspend fun update(@PathVariable uuid: UUID, @RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }

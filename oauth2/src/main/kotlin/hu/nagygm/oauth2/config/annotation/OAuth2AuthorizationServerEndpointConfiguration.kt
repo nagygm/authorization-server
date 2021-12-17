@@ -16,7 +16,10 @@ import org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.oauth2.core.OAuth2AuthorizationException
+import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.coRouter
+import reactor.core.publisher.Mono
 
 
 /**
@@ -42,7 +45,8 @@ class OAuth2AuthorizationServerEndpointConfiguration {
 
     @Bean
     fun coRoute(authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter() {
-        this.add(route().POST("$oauth2${Endpoint.TOKEN.path}", { r -> mono { tokenHandler.acquireToken(r) } }) { ops ->
+        this.add(route().POST("$oauth2${Endpoint.TOKEN.path}", { r -> mono { tokenHandler.acquireToken(r) }
+            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
             ops
                 .operationId("tokenPost")
                 .parameter(parameterBuilder().name("client_id").description("REQUIRED, client authentication id"))
@@ -63,12 +67,14 @@ class OAuth2AuthorizationServerEndpointConfiguration {
                     responseBuilder().responseCode("400").description("This is another response description")
                         .content(Builder.contentBuilder())
                 )
-        }.GET("$oauth2${Endpoint.AUTHORIZATION.path}", { r -> mono { authorizationHandler.authorize(r) } }) { ops ->
+        }.GET("$oauth2${Endpoint.AUTHORIZATION.path}", { r -> mono { authorizationHandler.authorize(r) }
+            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
             ops
                 .operationId("auhorizationGet")
                 .parameter(parameterBuilder().name("response_type").description("REQUIRED, if missing will return error"))
                 .parameter(parameterBuilder().name("client_id").description("REQUIRED, client identifier"))
-        }.POST("$oauth2${Endpoint.AUTHORIZATION.path}", { r -> mono { authorizationHandler.authorize(r) } }) { ops ->
+        }.POST("$oauth2${Endpoint.AUTHORIZATION.path}", { r -> mono { authorizationHandler.authorize(r) }
+            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
             ops
                 .operationId("auhorizationPost")
                 .parameter(parameterBuilder().name("response_type").description("REQUIRED, if missing will return error"))
@@ -90,5 +96,16 @@ class OAuth2AuthorizationServerEndpointConfiguration {
             .group("management-admin")
             .pathsToMatch("${management}/**")
             .build()
+    }
+
+    fun genericErrorHandling(e: Throwable) : Mono<ServerResponse> {
+        return when(e.javaClass) {
+            OAuth2AuthorizationException::class.java -> ServerResponse.status(400).bodyValue(
+                (e as OAuth2AuthorizationException).error
+            )
+            else -> {
+                ServerResponse.status(500).body(Mono.just(e.message), String::class.java)
+            }
+        }
     }
 }

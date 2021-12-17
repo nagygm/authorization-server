@@ -1,6 +1,7 @@
 package hu.nagygm.oauth2.server.handler
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.nimbusds.jose.*
@@ -93,8 +94,11 @@ class TokenHandler(
             clientRegistrationRepository.findByClientId(request.clientId)
                 ?: throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT))
         }
-        if (clientRegistration.secret.isNotEmpty() && clientRegistration.secret != request.clientSecret) {
+        if (clientRegistration.secret.isNotEmpty() && !passwordEncoder.matches(request.clientSecret, clientRegistration.secret)) {
             throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT))
+        }
+        if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.REFRESH_TOKEN)) {
+            throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT))
         }
         val authorization = oAuth2AuthorizationRepository.findByRefreshToken(oauth2RefreshToken, clientRegistration.clientId)
             ?: throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.ACCESS_DENIED))
@@ -197,11 +201,14 @@ class TokenHandler(
             throw     OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT))
         }
 
-        val clientRegistration = clientRegistrationRepository.findByClientIdAndSecret(request.clientId, request.clientSecret)
+        val clientRegistration = clientRegistrationRepository.findByClientId(request.clientId)
         var scopes = request.scope?.split(" ")?.toSet()
         if (clientRegistration != null) {
+            if (clientRegistration.secret.isNotEmpty() && !passwordEncoder.matches(request.clientSecret, clientRegistration.secret)) {
+                throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.ACCESS_DENIED, "Invalid Authorization header", ""))
+            }
             if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.CLIENT_CREDENTIALS)) {
-                throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT))
+                throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT))
             }
             if (scopes == null) {
                 scopes = clientRegistration.scopes
@@ -291,8 +298,12 @@ class TokenHandler(
     }
 
     private fun fromPayloadToRefreshToken(payload: Payload): OAuth2RefreshToken {
-        val token = mapper.readValue(payload.toString(), OAuth2RefreshToken::class.java)
-        return token
+        val token = mapper.readValue(payload.toString(), object : TypeReference<HashMap<String, String>>() {})
+        return OAuth2RefreshToken(
+            token["tokenValue"] as String,
+            Instant.parse(token["issuedAt"]),
+            Instant.parse(token["expiresAt"])
+        )
     }
 
     //TODO refactor to validators and converters
@@ -416,7 +427,9 @@ class TokenHandler(
         val tokenType: String,
         @field:JsonProperty("expires_in")
         val expiresIn: Int,
+        @field:JsonProperty("scope")
         val scope: String,
+        @field:JsonProperty("refresh_token")
         val refreshToken: String?
     )
 }
