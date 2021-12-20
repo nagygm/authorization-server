@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO" monitorInterval="30">
+  <Property name="LOGS" value="./logs"/>
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT">
+      <JsonTemplateLayout eventTemplateUri="classpath:log4j_json_template.json"/>
+    </Console>
+  </Appenders>
+  <Appenders>
+    <RollingFile name="RollingFile" fileName="${LOGS}/spring-boot-logger.log"
+      filePattern="${LOGS}/archived/spring-boot-logger-%d{yyyy-MM-dd}.%i.log.gz" append="false">
+      <PatternLayout>
+        <Pattern>
+          %d{ISO8601} %-5level [${appName},%X{traceId:-},%X{spanId:-}] ${PID:-} [%-15.15thread] %-40.40logger{40} : %message%n"
+        </Pattern>
+      </PatternLayout>
+      <Policies>
+        <SizeBasedTriggeringPolicy size="250MB"/>
+        <TimeBasedTriggeringPolicy period="1d"/>
+      </Policies>
+      <DefaultRolloverStrategy max="20"/>
+    </RollingFile>
+  </Appenders>
+  <Loggers>
+    <Logger name="hu.nagygm" level="DEBUG" additivity="true">
+      <appender-ref ref="RollingFile"/>
+      <appender-ref ref="console"/>
+    </Logger>
+    <Root level="error" additivity="false">
+      <appender-ref ref="RollingFile"/>
+      <appender-ref ref="console"/>
+    </Root>
+  </Loggers>
+</Configuration>
