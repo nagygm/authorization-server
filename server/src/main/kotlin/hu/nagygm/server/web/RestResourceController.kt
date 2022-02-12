@@ -5,14 +5,13 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.web.bind.annotation.*
 import java.util.*
-import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.basePathV1 as basePathV1
 
 
 //TODO implement
 @RestController
 class RestResourceController {
 
-    @GetMapping(basePathV1.management + "/resources")
+    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources")
     suspend fun get(): Page<ResourceDto> {
         return PageImpl(
             listOf(),
@@ -20,17 +19,17 @@ class RestResourceController {
         )
     }
 
-    @GetMapping(basePathV1.management + "/resources/{uuid}")
+    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources/{uuid}")
     suspend fun getOne(@PathVariable uuid: UUID): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PostMapping(basePathV1.management + "/resources")
+    @PostMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources")
     suspend fun create(@RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PutMapping(basePathV1.management + "/resources/{uuid}")
+    @PutMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources/{uuid}")
     suspend fun update(@PathVariable uuid: UUID, @RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }

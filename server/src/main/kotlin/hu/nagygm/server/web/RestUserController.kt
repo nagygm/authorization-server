@@ -22,7 +22,7 @@ class RestUserController(
 ) {
     @RequestMapping(
         method = [RequestMethod.POST],
-        path = [basePathV1.oauth2 + "/consent"],
+        path = ["#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.oauth2}/consent"],
     )
     @ResponseStatus(HttpStatus.FOUND)
     suspend fun postConsent(form: ConsentFormRequest): ResponseEntity<Void> {
@@ -50,7 +50,7 @@ class RestUserController(
         val acceptedScopes: Set<String>,
     )
 
-    @GetMapping(basePathV1.management + "/users")
+    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/users")
     suspend fun getUsers(): Page<AppUserDto> {
         val results = r2dbcAppUserDao.fetchAllUsersWithProfile()
             .map { AppUserDto(it.userId.toString(), it.firstName, it.lastName, it.username, it.email, it.enabled) }
@@ -61,7 +61,7 @@ class RestUserController(
         )
     }
 
-    @GetMapping(basePathV1.management + "/users/{uuid}")
+    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/users/{uuid}")
     suspend fun getUser(@PathVariable uuid: UUID): AppUserDto {
         val result = r2dbcAppUserDao.fetchOneUsersWithProfile(uuid)
             .map { AppUserDto(it.userId.toString(), it.firstName,it.lastName, it.username, it.email, it.enabled) }

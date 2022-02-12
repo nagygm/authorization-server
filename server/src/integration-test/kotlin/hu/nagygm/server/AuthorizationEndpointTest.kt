@@ -1,5 +1,6 @@
 package hu.nagygm.server
 
+import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.extensions.spring.SpringExtension
 import org.springframework.beans.factory.annotation.Autowired
@@ -9,8 +10,10 @@ import org.springframework.test.web.reactive.server.WebTestClient
 
 @AutoConfigureWebTestClient
 @SpringBootTest
-class UserControllerTest : AnnotationSpec() {
+class AuthorizationEndpointTest: AnnotationSpec() {
     override fun extensions() = listOf(SpringExtension)
+
+    val authorizationEndpoint = OAuth2AuthorizationServerEndpointConfiguration.oauth2 + "/authorization"
 
     @Autowired
     lateinit var client: WebTestClient
@@ -21,18 +24,9 @@ class UserControllerTest : AnnotationSpec() {
 
     @Test
     fun `When unauthenticated consent page shoud return 302 found and redirect to login`() {
-        client.get().uri("/consent").exchange()
+        client.get().uri(authorizationEndpoint).exchange()
             .expectStatus().isFound.expectHeader()
             .location("/login")
     }
-
-    @Test
-    fun `When authenticated consent page should return 200 OK`() {
-        client.get().uri("/consent").exchange()
-            .expectStatus().isOk
-    }
-
-
-
 
 }

@@ -28,19 +28,24 @@ services:
     volumes:
       - /mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - /home/nagygm/docker_environments/authorization-server/mongodb/data:/data/db
-  tc-server:
-    image: "jetbrains/teamcity-server:latest"
-    depends_on:
-      - "postgre-db"
+#  tc-server:
+#    image: "jetbrains/teamcity-server:latest"
+#    depends_on:
+#      - "postgre-db"
+#    ports:
+#      - "8111:8111"
+#    volumes:
+#      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/datadir:/data/teamcity_server/datadir
+#      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/logs:/opt/teamcity/logs
+#  tc-agent:
+#    image: "jetbrains/teamcity-agent"
+#    depends_on:
+#      - "tc-server"
+#    environment:
+#      - SERVER_URL=tc-server
+#      - AGENT_NAME=local-docker
+  jenkins:
+    image: "jenkins/jenkins:lts-jdk11"
     ports:
-      - "8111:8111"
-    volumes:
-      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/datadir:/data/teamcity_server/datadir
-      - /home/nagygm/docker_environments/authorization-server/teamcity-server-data/logs:/opt/teamcity/logs
-  tc-agent:
-    image: "jetbrains/teamcity-agent"
-    depends_on:
-      - "tc-server"
-    environment:
-      - SERVER_URL=tc-server
-      - AGENT_NAME=local-docker
+      - "8080:8080"
+      - "50000:50000"

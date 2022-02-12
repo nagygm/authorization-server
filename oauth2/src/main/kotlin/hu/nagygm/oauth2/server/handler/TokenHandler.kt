@@ -344,13 +344,12 @@ class TokenHandler(
     }
 
     private suspend fun extractClientAuthenticationData(request: ServerRequest): ClientCredentials {
-        var encodedClientAuth = ""
         val authorizationHeader: String? = request.headers().firstHeader("Authorization")
         var clientId: String? = null
         var clientSecret: String? = null
 
         if (authorizationHeader?.isNotBlank() == true && "BASIC".equals(authorizationHeader.substring(0, 5), ignoreCase = true)) {
-            encodedClientAuth = authorizationHeader.substring(6)
+            var encodedClientAuth = authorizationHeader.substring(6)
             var position: Int = encodedClientAuth.indexOf(':')
             val plainClientAuth = if (position == -1) {
                 //base64 encoded
@@ -372,7 +371,7 @@ class TokenHandler(
         return ClientCredentials(clientId, clientSecret);
     }
 
-    private inline fun decodeBase64(credentials: String): String {
+    private fun decodeBase64(credentials: String): String {
         return String(Base64.getDecoder().decode(credentials), StandardCharsets.UTF_8)
     }
 

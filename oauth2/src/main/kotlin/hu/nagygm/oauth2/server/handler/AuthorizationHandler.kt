@@ -1,7 +1,7 @@
 package hu.nagygm.oauth2.server.handler
 
 import hu.nagygm.oauth2.client.registration.*
-import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.basePathV1
+import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.OAuth2Api
 import hu.nagygm.oauth2.server.GrantRequest
 import hu.nagygm.oauth2.server.GrantRequestService
 import hu.nagygm.oauth2.server.security.pkce.CodeChallengeMethods
@@ -72,7 +72,7 @@ class AuthorizationHandler(
             return ServerResponse.badRequest().body(mono { ex.error }, OAuth2Error::class.java).awaitFirst()
         }
         //TODO move consent url to configuration
-        val location = "${basePathV1.oauth2}${basePathV1.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
+        val location = "${OAuth2Api.oauth2}${OAuth2Api.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
 
         return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
     }

@@ -32,7 +32,8 @@ allprojects {
         postgres: "42.2.14",
         jooq: "3.15.5",
         spring_data_r2dbc: "1.4.0",
-        r2dbc_postgresql: "0.8.10.RELEASE"
+        r2dbc_postgresql: "0.8.10.RELEASE",
+        log4j2: "2.17.0"
 
     ]
 

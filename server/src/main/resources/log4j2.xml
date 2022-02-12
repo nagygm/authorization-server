@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO" monitorInterval="30">
-  <Property name="LOGS" value="./logs"/>
+  <Properties>
+    <Property name="LOGS" value="./logs"/>
+  </Properties>
   <Appenders>
     <Console name="console" target="SYSTEM_OUT">
       <JsonTemplateLayout eventTemplateUri="classpath:log4j_json_template.json"/>
     </Console>
-  </Appenders>
-  <Appenders>
     <RollingFile name="RollingFile" fileName="${LOGS}/spring-boot-logger.log"
       filePattern="${LOGS}/archived/spring-boot-logger-%d{yyyy-MM-dd}.%i.log.gz" append="false">
       <PatternLayout>
@@ -16,7 +16,7 @@
       </PatternLayout>
       <Policies>
         <SizeBasedTriggeringPolicy size="250MB"/>
-        <TimeBasedTriggeringPolicy period="1d"/>
+        <TimeBasedTriggeringPolicy interval="1"/>
       </Policies>
       <DefaultRolloverStrategy max="20"/>
     </RollingFile>

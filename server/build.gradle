@@ -41,7 +41,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
 
     //postgresql
-    implementation "org.springframework.data:spring-data-r2dbc:${project.ext.dep.spring_data_r2dbc}"
+    implementation "org.springframework.data:spring-data-r2dbc"
+//    :${project.ext.dep.spring_data_r2dbc}"
     implementation "io.r2dbc:r2dbc-postgresql:${project.ext.dep.r2dbc_postgresql}"
 
     flywayMigration "org.postgresql:postgresql:${project.ext.dep.postgres}"
@@ -51,8 +52,8 @@ dependencies {
 //    implementation "org.postgresql:postgresql:${project.ext.dep.postgres}"
 //    jooqGenerator "org.postgresql:postgresql:${project.ext.dep.postgres}"
 
+    testImplementation "org.springframework.data:spring-data-r2dbc"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
-    integrationTestImplementation "org.springframework.boot:spring-boot-starter-test"
 }
 
 task integrationTest(type: Test) {

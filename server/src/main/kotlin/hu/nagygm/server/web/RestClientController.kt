@@ -9,38 +9,37 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.web.bind.annotation.*
 import java.util.*
-import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.basePathV1 as basePathV1
 
 //TODO add service layer, add business logic, add permissions, swagger description
 @RestController
-class RestClientController (
+class RestClientController(
     @Autowired val r2dbcClientDao: R2dbcClientDao
-        ) {
-    @GetMapping(basePathV1.management + "/clients")
+) {
+    @GetMapping("T(AdminManagementEndpointConfiguration){}/clients")
     suspend fun get(): Page<ClientProjection> {
         val results = r2dbcClientDao.fetchAll()
             .collectList().awaitFirst()
         return PageImpl(
             results,
-            PageRequest.of(0,10), results.size.toLong()
+            PageRequest.of(0, 10), results.size.toLong()
         )
     }
 
-    @GetMapping(basePathV1.management + "/clients/{uuid}")
+    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients/{uuid}")
     suspend fun getOne(@PathVariable uuid: UUID): ClientProjection {
         val result = r2dbcClientDao.fetchOne(uuid)
             .awaitFirst()
         return result
     }
 
-    @PostMapping(basePathV1.management + "/clients")
+    @PostMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients")
     suspend fun create(@RequestBody client: ClientProjection): ClientProjection {
         val result = r2dbcClientDao.save(client)
             .awaitFirst()
         return result
     }
 
-    @PutMapping(basePathV1.management + "/clients/{uuid}")
+    @PutMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients/{uuid}")
     suspend fun update(@PathVariable uuid: UUID, @RequestBody client: ClientProjection): ClientProjection {
         client.id = uuid
         val result = r2dbcClientDao.save(client)
