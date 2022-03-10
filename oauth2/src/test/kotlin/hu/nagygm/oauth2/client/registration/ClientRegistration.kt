@@ -4,10 +4,16 @@ import io.kotest.extensions.spring.SpringExtension
 class ClientRegistrationSpecification : AnnotationSpec() {
     override fun extensions() = listOf(SpringExtension)
 
+    // Global
+    //Must use TLS
+    // The endpoint MUST NOT include a fragment component
+
+
+    //Sectino 2
 
     @Test
     fun `Before initiating the protocol, the client must establish its registration with the authorization server`() {
-        //
+        //From RFC 6749:
     }
 
     @Test
@@ -15,10 +21,9 @@ class ClientRegistrationSpecification : AnnotationSpec() {
         //
     }
 
-    @
-
     @Test
-    fun `During client registration specify the client type`() {
+    fun `During client registration the client type must be specified`() {
+        //From RFC 6749:
 
     }
 
@@ -191,5 +196,12 @@ class ClientRegistrationSpecification : AnnotationSpec() {
     fun `The AS may support including client credentials in request-body using POST, required client_id and client_secret, must not be included in URI`() {
 
     }
+
+    @Test
+    fun `The clients must be registered beforehand to be able to use the authorization server`() {
+
+    }
+
+
 
 }

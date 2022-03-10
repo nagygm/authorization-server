@@ -1,5 +1,6 @@
 package hu.nagygm.server.consent
 
+import hu.nagygm.oauth2.client.registration.ClientRegistrationRepository
 import hu.nagygm.oauth2.server.GrantRequestStates
 import hu.nagygm.oauth2.server.GrantRequest
 import hu.nagygm.oauth2.server.GrantRequestService
@@ -20,7 +21,8 @@ import java.util.*
 class ConsentServiceImpl(
     @Autowired val userService: UserService,
     @Autowired val mongoAppUserRepository: MongoAppUserRepository,
-    @Autowired val grantRequestService: GrantRequestService
+    @Autowired val grantRequestService: GrantRequestService,
+    @Autowired val clientRegistrationRepository: ClientRegistrationRepository
 ) : ConsentService {
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96)
@@ -47,7 +49,8 @@ class ConsentServiceImpl(
         val grantRequest = grantRequestService.getGrantRequestById(grantRequestId, appUserDetails.id)
             ?: throw AccessDeniedException("Access denied: can't find grant request")
         if (!grantRequest.scopes.containsAll(acceptedScopes)) {
-            return ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.INVALID_SCOPE}")
+            val redirectUri = getRedirectUri(grantRequest)
+            return ConsentProcessResponse("${redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.INVALID_SCOPE}")
         }
         return if (accept) {
             grantRequest.code = codeGenerator.generateKey()
@@ -61,6 +64,13 @@ class ConsentServiceImpl(
             grantRequest.requestState = GrantRequestStates.ConsentRejected.code
             grantRequestService.save(grantRequest)
             ConsentProcessResponse("${grantRequest.redirectUri}?${OAuth2ParameterNames.ERROR}=${OAuth2ErrorCodes.ACCESS_DENIED}")
+        }
+    }
+
+    private suspend fun getRedirectUri(grantRequest: GrantRequest) : String {
+        return grantRequest.redirectUri.ifBlank {
+            val redirectUri = clientRegistrationRepository.findByClientId(grantRequest.clientId)?.redirectUris?.first()
+            return redirectUri ?: throw AccessDeniedException("Access denied: can't find redirect uri")
         }
     }
 

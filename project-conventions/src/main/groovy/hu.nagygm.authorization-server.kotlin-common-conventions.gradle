@@ -55,6 +55,11 @@ dependencies {
     testImplementation("io.kotest.extensions:kotest-extensions-spring:${project.ext.dep.kotest_extension}")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:${project.ext.dep.kotest_extension}")
     testImplementation("io.kotest.extensions:kotest-extensions-pitest:${project.ext.dep.kotest_extension}")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude module: 'junit'
+        exclude module: 'mockito-core'
+    }
+    testImplementation("com.ninja-squad:springmockk:${project.ext.dep.springmockk}")
 }
 
 tasks.named('test') {

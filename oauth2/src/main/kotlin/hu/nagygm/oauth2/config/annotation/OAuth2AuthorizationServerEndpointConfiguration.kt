@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import hu.nagygm.oauth2.server.handler.AuthorizationHandler
 import hu.nagygm.oauth2.server.handler.TokenHandler
 import kotlinx.coroutines.reactor.mono
+import org.reactivestreams.Publisher
 import org.springdoc.core.GroupedOpenApi
 import org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder
 import org.springdoc.core.fn.builders.content.Builder
@@ -17,9 +18,12 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.oauth2.core.OAuth2AuthorizationException
+import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.coRouter
+import org.springframework.web.reactive.result.view.Rendering
 import reactor.core.publisher.Mono
+import java.util.function.Function
 
 
 @Configuration
@@ -29,20 +33,28 @@ class OAuth2AuthorizationServerEndpointConfiguration {
     companion object OAuth2Api {
         @Value("\${oauth2.api.v1.base:/oauth2/v1}")
         var oauth2: String = "/oauth2/v1"
+
         @Value("\${oauth2.api.v1.authorize:/authorize}")
         var authorize: String = "/authorize"
+
         @Value("\${oauth2.api.v1.token:/token}")
         var token: String = "/token"
+
         @Value("\${oauth2.api.v1.consent:/consent}")
         var consent: String = "/consent"
+
         @Value("\${oauth2.api.v1.userinfo:/userinfo}")
         var userinfo: String = "/userinfo"
+
         @Value("\${oauth2.api.v1.endsession:/endsession}")
         var endsession: String = "/endsession"
+
         @Value("\${oauth2.api.v1.checksession:/checksession}")
         var checksession: String = "/checksession"
+
         @Value("\${oauth2.api.v1.revocation:/revocation}")
         var revocation: String = "/revocation"
+
         @Value("\${oauth2.api.v1.introspect:/introspect}")
         var introspect: String = "/introspect"
 
@@ -57,8 +69,6 @@ class OAuth2AuthorizationServerEndpointConfiguration {
     }
 
 
-
-
     @Bean("tokenJsonMapper")
     fun tokenJsonMapper(): ObjectMapper {
         return ObjectMapper().registerModule(ParameterNamesModule())
@@ -68,9 +78,11 @@ class OAuth2AuthorizationServerEndpointConfiguration {
 
 
     @Bean
-    fun coRoute(authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter() {
-        this.add(route().POST(tokenPath(), { r -> mono { tokenHandler.acquireToken(r) }
-            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
+    fun coRoute(authorizationHandler: AuthorizationHandler, tokenHandler: TokenHandler) = coRouter {
+        this.add(route().POST(tokenPath(), { r ->
+            mono { tokenHandler.acquireToken(r) }
+                .onErrorResume(this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling)
+        }) { ops ->
             ops
                 .operationId("tokenPost")
                 .parameter(parameterBuilder().name("client_id").description("REQUIRED, client authentication id"))
@@ -91,14 +103,18 @@ class OAuth2AuthorizationServerEndpointConfiguration {
                     responseBuilder().responseCode("400").description("This is another response description")
                         .content(Builder.contentBuilder())
                 )
-        }.GET(authorizePath(), { r -> mono { authorizationHandler.authorize(r) }
-            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
+        }.GET(authorizePath(), { r ->
+            mono { authorizationHandler.authorize(r) }
+                .onErrorResume(this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling)
+        }) { ops ->
             ops
                 .operationId("auhorizationGet")
                 .parameter(parameterBuilder().name("response_type").description("REQUIRED, if missing will return error"))
                 .parameter(parameterBuilder().name("client_id").description("REQUIRED, client identifier"))
-        }.POST(authorizePath(), { r -> mono { authorizationHandler.authorize(r) }
-            .onErrorResume( this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling) }) { ops ->
+        }.POST(authorizePath(), { r ->
+            mono { authorizationHandler.authorize(r) }
+                .onErrorResume(this@OAuth2AuthorizationServerEndpointConfiguration::genericErrorHandling)
+        }) { ops ->
             ops
                 .operationId("auhorizationPost")
                 .parameter(parameterBuilder().name("response_type").description("REQUIRED, if missing will return error"))
@@ -114,14 +130,40 @@ class OAuth2AuthorizationServerEndpointConfiguration {
             .build()
     }
 
-    fun genericErrorHandling(e: Throwable) : Mono<ServerResponse> {
-        return when(e.javaClass) {
-            OAuth2AuthorizationException::class.java -> ServerResponse.status(400).bodyValue(
-                (e as OAuth2AuthorizationException).error
+    fun genericErrorHandling(e: Throwable): Mono<ServerResponse> {
+        return when (e.javaClass) {
+            OAuth2AuthorizationException::class.java -> ServerResponse.badRequest().body(
+                Publisher {
+                    val oauth2Error = (e as OAuth2AuthorizationException).error
+                    OAuth2ErrorResponse(oauth2Error.errorCode, oauth2Error.description, oauth2Error.uri, "")
+                },
+                OAuth2ErrorResponse::class.java
             )
             else -> {
                 ServerResponse.status(500).body(Mono.just(e.message ?: "Internal error"), String::class.java)
             }
         }
     }
+
+    data class OAuth2ErrorResponse(val error: String, val errorDescription: String, val errorUri: String, val state: String)
+
+
+
+    interface OAuth2ErrorResponseStrategy {
+        fun respond(request: ServerRequest, exception: Throwable) : Mono<ServerResponse>
+    }
+
+    class RedirectOAuth2ErrorResponseStrategy : OAuth2ErrorResponseStrategy {
+        override fun respond(request: ServerRequest, exception: Throwable): Mono<ServerResponse> {
+            TODO("Not yet implemented")
+        }
+    }
+
+    class RespondOAuth2ErrorResponseStrategy : OAuth2ErrorResponseStrategy {
+        override fun respond(request: ServerRequest, exception: Throwable): Mono<ServerResponse> {
+            TODO("Not yet implemented")
+        }
+
+    }
+
 }

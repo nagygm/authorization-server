@@ -140,7 +140,8 @@ class TokenHandler(
             }
 
             if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.AUTHORIZATION_CODE) &&
-                grantRequest.redirectUri != request.redirectUri
+                (grantRequest.redirectUri.isNotBlank() && grantRequest.redirectUri != request.redirectUri ) ||
+                (grantRequest.redirectUri.isBlank() && clientRegistration.redirectUris.size != 1)
             ) {
                 throw (OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT)))
             }

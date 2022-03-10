@@ -15,10 +15,12 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResp
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
 import org.springframework.security.oauth2.core.endpoint.PkceParameterNames
 import org.springframework.stereotype.Service
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import java.net.MalformedURLException
+import java.net.URI
 import java.net.URL
 import java.util.regex.Matcher
 
@@ -63,18 +65,56 @@ class AuthorizationHandler(
     @Autowired val grantRequestService: GrantRequestService
 ) {
 
-
     suspend fun authorize(serverRequest: ServerRequest): ServerResponse {
         val request = AuthorizationRequest(serverRequest.queryParams())
-        val grantRequest = try {
-            AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository, grantRequestService).validate(request)
-        } catch (ex: OAuth2AuthorizationException) {
-            return ServerResponse.badRequest().body(mono { ex.error }, OAuth2Error::class.java).awaitFirst()
-        }
-        //TODO move consent url to configuration
-        val location = "${OAuth2Api.oauth2}${OAuth2Api.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
+        val result = AuthorizationRequest.AuthorizationRequestValidator(clientRegistrationRepository).validate(request)
+        return if (result.isValid) {
+            val grantRequest = grantRequestService.saveGrantRequest(request)
+            //TODO move consent url to configuration
+            val location = "${OAuth2Api.oauth2}${OAuth2Api.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
 
+            ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
+            
+        } else {
+            if(result.error == null) {
+                throw IllegalStateException("Invalid validation")
+            } else if(result.isRedirectable ){
+                //TODO proper redriect uri
+                redirectWithError(result.error, "", LinkedMultiValueMap())
+            } else {
+                respondWithError(result.error, request)
+            }
+        }
+
+    }
+
+    private suspend fun respond(grantRequest: GrantRequest) :ServerResponse {
+        //TODO if configuration for clients requires consent, redirect to consent page else redirect to redirect url
+        val location = "${OAuth2Api.oauth2}${OAuth2Api.consent}?grant_request_id=${grantRequest.id}&client_id=${grantRequest.clientId}"
         return ServerResponse.status(HttpStatus.FOUND).header("Location", location).build().awaitFirst()
+    }
+
+    private suspend fun respondWithError(error: OAuth2Error, request: AuthorizationRequest): ServerResponse {
+        return ServerResponse.badRequest().bodyValue(error).awaitFirst()
+    }
+
+    private suspend fun redirectWithError(error: OAuth2Error, redirectUri: String, parameters: MultiValueMap<String, String>): ServerResponse {
+        //when has valid redirect URI must send
+        return ServerResponse.status(HttpStatus.FOUND)
+            .location(URI(buildLocation(redirectUri, parameters))).build().awaitFirst()
+    }
+    private suspend fun buildLocation(redirectUri: String, parameters: MultiValueMap<String, String>): String {
+        val url = URL(redirectUri)
+        val query = url.query
+        val queryParams =
+            if (query.isNullOrEmpty()) {
+                parameters
+            }
+            else {
+                parameters.toSingleValueMap().plus(query.split("&").map { it.split("=") }.map { it[0] to it[1] })
+            }
+        val queryString = queryParams.map { "${it.key}=${it.value}" }.joinToString("&")
+        return "${url.protocol}://${url.host}${url.path}?$queryString"
     }
 
     class AuthorizationRequest(parameters: MultiValueMap<String, String>) {
@@ -83,7 +123,7 @@ class AuthorizationHandler(
         val responseType: String
         var redirectUri: String
         val scopes: Set<String>
-        val codeChallenge : String?
+        val codeChallenge: String?
         val codeChallengeMethod: String?
 
         init {
@@ -103,17 +143,17 @@ class AuthorizationHandler(
             }
         }
 
+        //TODO refactore to validator/result/context type class hierarchy, commander or specification?
         class AuthorizationRequestValidator(
-            private val clientRegistrationRepository: ClientRegistrationRepository,
-            private val grantRequestService: GrantRequestService
+            private val clientRegistrationRepository: ClientRegistrationRepository
         ) {
             fun supports(clazz: Class<*>): Boolean =
                 clazz.isAssignableFrom(AuthorizationRequest::class.java)
 
-            suspend fun validate(authorizationRequest: AuthorizationRequest): GrantRequest {
+            suspend fun validate(authorizationRequest: AuthorizationRequest): AuthorizationValidationResult {
 
                 if (!isCodeChallengeValid(authorizationRequest.codeChallenge, authorizationRequest.codeChallengeMethod)) {
-                    throw OAuth2AuthorizationException(
+                    return AuthorizationValidationResult( error =
                         OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
                             "Code challenge is invalid",
@@ -124,16 +164,16 @@ class AuthorizationHandler(
 
                 //----- VALIDATE RESPONSE TYPE TODO extract to business logic validator
                 if (authorizationRequest.responseType.isBlank()) {
-                    throw OAuth2AuthorizationException(
-                        OAuth2Error(
+                    return AuthorizationValidationResult( error =
+                    OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
                             "Invalid parameter: ${OAuth2ParameterNames.RESPONSE_TYPE}",
                             "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                         )
                     )
                 } else if (SupportedResponseTypesRegistry.notContains(authorizationRequest.responseType)) {
-                    throw OAuth2AuthorizationException(
-                        OAuth2Error(
+                    return AuthorizationValidationResult( error =
+                    OAuth2Error(
                             OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE,
                             "Unsupported response type: ${authorizationRequest.responseType}",
                             "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
@@ -143,8 +183,8 @@ class AuthorizationHandler(
                 //----- VALIDATE client ID TODO extract to business logic validator
 
                 if (authorizationRequest.clientId.isBlank()) {
-                    throw OAuth2AuthorizationException(
-                        OAuth2Error(
+                    return AuthorizationValidationResult( error =
+                    OAuth2Error(
                             OAuth2ErrorCodes.INVALID_REQUEST,
                             "Invalid parameter: ${OAuth2ParameterNames.CLIENT_ID}",
                             "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
@@ -155,8 +195,8 @@ class AuthorizationHandler(
                 //TODO add property for authorized client flows
                 val registration =
                     clientRegistrationRepository.findByClientId(authorizationRequest.clientId)
-                        ?: throw OAuth2AuthorizationException(
-                            OAuth2Error(
+                        ?: return AuthorizationValidationResult(
+                            error = OAuth2Error(
                                 OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
                                 "Client not authorized: ${authorizationRequest.clientId}",
                                 "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
@@ -165,9 +205,10 @@ class AuthorizationHandler(
                 if (!registration.authorizationGrantTypes.any {
                         it == SupportedResponseTypesRegistry.responseTypeToGrantType(authorizationRequest.responseType)
                     }) {
-                    throw OAuth2AuthorizationException(
+                    return AuthorizationValidationResult( error =
                         OAuth2Error(
-                            OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client is not to authorize with this response type",
+                            OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
+                            "Client is not to authorize with this response type",
                             "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
                         )
                     )
@@ -177,20 +218,28 @@ class AuthorizationHandler(
                 if ((registration.redirectUris.size != 1 && authorizationRequest.redirectUri.isBlank()) || (authorizationRequest.redirectUri.isNotBlank() &&
                             (!validateUri(authorizationRequest.redirectUri) || !registration.redirectUris.contains(authorizationRequest.redirectUri)))
                 ) {
-                    throw OAuth2AuthorizationException(
-                        OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST)
+                    return AuthorizationValidationResult(error =
+                        OAuth2Error(
+                            OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid redirect URI, or redirect URI not registered for client",
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
+                        )
                     )
                 }
 
                 //----- VALIDATE scopes TODO extract to business logic validator
-                if (!registration.scopes.containsAll(authorizationRequest.scopes)) {
-                    throw OAuth2AuthorizationException(
-                        OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE)
+                if (authorizationRequest.scopes.isEmpty() && !registration.scopes.containsAll(authorizationRequest.scopes)) {
+                    return AuthorizationValidationResult( error =
+                        OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE,
+                            "Scopes not matching the clients scopes",
+                            "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-04#section-4.1.2.1"
+                        )
                     )
                 }
 
-                if (authorizationRequest.redirectUri.isBlank()) authorizationRequest.redirectUri = registration.redirectUris.first()
-                return grantRequestService.saveGrantRequest(authorizationRequest)
+                return AuthorizationValidationResult(
+                    isValid = true, isRedirectable = true, error = null
+                )
             }
 
 
@@ -208,7 +257,7 @@ class AuthorizationHandler(
                     // As for oauth2.1 draft recommendation sha256 code_challenge should be mandatory
                     return true
                 } else {
-                    if(codeChallengeMethod != null) {
+                    if (codeChallengeMethod != null) {
                         // https://tools.ietf.org/html/rfc7636#section-4.2
                         if (!CodeChallengeMethods.isValid(codeChallengeMethod)) {
                             throw OAuth2AuthorizationException(
@@ -223,7 +272,7 @@ class AuthorizationHandler(
 
                     // check the format and length of the code_challenge
                     val matcher: Matcher = CodeVerifier.CODE_CHALLENGE_PATTERN.matcher(codeChallenge);
-                    if(matcher.matches()) {
+                    if (matcher.matches()) {
                         return true
                     }
                     return false
@@ -249,5 +298,12 @@ class AuthorizationHandler(
                 }
             }
         }
+        data class AuthorizationValidationResult(
+            val isValid: Boolean = false,
+            val isRedirectable: Boolean = false,
+            val error: OAuth2Error?
+        )
     }
 }
+
+

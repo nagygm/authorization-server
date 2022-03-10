@@ -17,7 +17,7 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 class BasicSecurityConfiguration {
 
     @Bean
-    fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain? {
+    fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http
             .csrf().requireCsrfProtectionMatcher(NegatedServerWebExchangeMatcher { exchange ->
                 ServerWebExchangeMatchers.pathMatchers(
@@ -43,6 +43,7 @@ class BasicSecurityConfiguration {
 
     private fun tempAuthOverride() : Array<String> {
         //FIXME: remove this after role implementation
+
         return arrayOf("ADMIN")
     }
 
