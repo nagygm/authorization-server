@@ -1,7 +1,7 @@
 import {stringify} from 'query-string';
 import {fetchUtils} from "react-admin";
 
-const apiUrl = "http://localhost:8080/management/v1";
+const apiUrl = "http://localhost:8081/management/v1";
 
 const client = (url, options = {}) => {
     return fetchUtils.fetchJson(url, options);

@@ -19,6 +19,10 @@
       <input type="text" id="username" name="username"/>
       <label for="password">Password</label>
       <input type="password" id="password" name="password"/>
+      <label th:text="#{label.form.login2fa}">
+      Google Authenticator Verification Code
+      </label>
+      <input type='text' name='code'/>
       <div class="form-actions">
         <button type="submit" class="btn">Log in</button>
       </div>

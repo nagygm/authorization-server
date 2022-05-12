@@ -11,7 +11,7 @@ import java.util.*
 @RestController
 class RestResourceController {
 
-    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources")
+    @GetMapping("/management/v1/resources")
     suspend fun get(): Page<ResourceDto> {
         return PageImpl(
             listOf(),
@@ -19,17 +19,17 @@ class RestResourceController {
         )
     }
 
-    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources/{uuid}")
+    @GetMapping("/management/v1/resources/{uuid}")
     suspend fun getOne(@PathVariable uuid: UUID): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PostMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources")
+    @PostMapping("/management/v1/resources")
     suspend fun create(@RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }
 
-    @PutMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/resources/{uuid}")
+    @PutMapping("/management/v1/resources/{uuid}")
     suspend fun update(@PathVariable uuid: UUID, @RequestBody client: ResourceDto): ResourceDto {
         return ResourceDto(UUID.randomUUID(), "fake", "fakehost", "fakedesc", "fakeclientid")
     }

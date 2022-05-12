@@ -1,0 +1,83 @@
+trigger:
+  branches:
+    include:
+      - master
+      - release/*
+
+variables:
+  - name: containerImageRepository
+    value: 'authorization-server'
+  - name: dockerfilePath
+    value: '$(Build.SourcesDirectory)/authorization-server/server/Dockerfile'
+  - name: tag
+    value: '$(Build.BuildId)'
+  - name: profile
+    value: development
+  - name: isMaster
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+  - name: isRelease
+    value: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/release')]
+  - name: appversion
+    value: ''
+  - name: appPath
+    value: '$(Build.SourcesDirectory)/authorization-server/server'
+  - name: dockerContainerRegistryServiceConnection
+    value: 'b04075f8-e949-4387-97d0-6c0a0d297099'
+
+stages:
+  - stage: BuildAndTestProject
+      displayName: Build And Test Project
+      jobs:
+        - job: ArtifactBuild
+          condition: eq(variables.isMaster, 'true')
+          displayName: Build Project
+          pool:
+            vmImage: 'ubuntu-latest'
+          steps:
+            - checkout: self
+            - checkout: common-build
+            - task: Gradle@2
+              displayName: 'Build project'
+              inputs:
+                workingDirectory: '$(Build.SourcesDirectory)/authorization-server'
+                gradleWrapperFile: '$(Build.SourcesDirectory)/authorization-server/gradlew'
+                gradleOptions: '-Xmx2048m'
+                javaHomeOption: 'JDKVersion'
+                jdkVersionOption: '1.11'
+                jdkArchitectureOption: 'x64'
+                publishJUnitResults: true
+                testResultsFiles: '**/TEST-*.xml'
+                tasks: 'clean build'
+  - stage: BuildAndPushDockerImage
+    displayName: 'Build and Push Docker Image to Container Registry'
+    jobs:
+      - job: BuildDockerImage
+        condition: eq(variables.isRelease, 'true')
+        displayName: 'Build Docker Image'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+          - checkout: common-build
+          - bash: echo "##vso[task.setvariable variable=appversion;]$(gradle -q -p $(appPath) getVersion)"
+          - task: Docker@2
+            displayName: Build an image to container registry
+            inputs:
+              command: build
+              repository: $(containerImageRepository)
+              dockerfile: $(dockerfilePath)
+              buildContext: $(Build.SourcesDirectory)
+              containerRegistry: $(dockerContainerRegistryServiceConnection)
+              tags: |
+                v$(appversion).$(tag)
+              arguments: '--build-arg profile_default=$(profile)'
+          - task: Docker@2
+            displayName: Push an image to container registry
+            inputs:
+              command: push
+              repository: $(containerImageRepository)
+              dockerfile: $(dockerfilePath)
+              buildContext: $(Build.SourcesDirectory)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                v$(appversion).$(tag)

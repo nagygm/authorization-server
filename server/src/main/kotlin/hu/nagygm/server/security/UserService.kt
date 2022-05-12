@@ -1,5 +1,7 @@
 package hu.nagygm.server.security
 
+import hu.nagygm.oauth2.server.client.AppUserDao
+import hu.nagygm.server.mangement.appuser.mongo.MongoAppUserRepository
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,10 +15,13 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 
-@Service
-class UserService(@Autowired val mongoAppUserRepository: MongoAppUserRepository) : ReactiveUserDetailsService {
+interface UserService : ReactiveUserDetailsService {
+    suspend fun getCurrentUser(): User?
+}
 
-    suspend fun getCurrentUser(): User? {
+class MongoUserService(@Autowired val mongoAppUserRepository: MongoAppUserRepository) : UserService {
+
+    override suspend fun getCurrentUser(): User? {
         return ReactiveSecurityContextHolder.getContext()
             .map(SecurityContext::getAuthentication)
             .map<User>(this::currentUser).awaitFirstOrNull()
@@ -37,6 +42,36 @@ class UserService(@Autowired val mongoAppUserRepository: MongoAppUserRepository)
                 appUser.accountNonExpired,
                 appUser.credentialsNonExpired,
                 appUser.accountNonLocked,
+                emptyList()
+            )
+        }
+    }
+
+}
+
+@Service
+class R2dbcUserService(@Autowired val appUserDao: AppUserDao) : UserService {
+
+    override suspend fun getCurrentUser(): User? {
+        return ReactiveSecurityContextHolder.getContext()
+            .map(SecurityContext::getAuthentication)
+            .map<User>(this::currentUser).awaitFirstOrNull()
+    }
+
+    private fun currentUser(auth: Authentication?): User? {
+        return auth?.principal as User?
+    }
+
+    override fun findByUsername(username: String?): Mono<UserDetails> {
+        requireNotNull(username)
+        return appUserDao.findByUsername(username).map {
+            User(
+                it.username,
+                it.passwordHash,
+                it.enabled,
+                it.accountNonExpired,
+                it.credentialsNonExpired,
+                it.accountNonLocked,
                 emptyList()
             )
         }

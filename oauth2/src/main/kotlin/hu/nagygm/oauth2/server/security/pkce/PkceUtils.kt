@@ -37,7 +37,6 @@ enum class CodeChallengeMethods(val value: String) {
 class CodeVerifier {
     companion object {
         private val logger = LogFactory.getLog(TokenHandler::class.java)
-        //https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
         val CODE_CHALLENGE_PATTERN = Pattern.compile("^[0-9a-zA-Z\\-\\.~_]{43,128}$")
 
         fun processCodeChallenge(codeVerifier: String): String {

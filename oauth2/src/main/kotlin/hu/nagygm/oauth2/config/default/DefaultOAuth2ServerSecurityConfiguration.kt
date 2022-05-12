@@ -1,8 +1,8 @@
 package hu.nagygm.oauth2.config.default
 
-import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration
-import hu.nagygm.oauth2.core.Endpoint
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import hu.nagygm.oauth2.config.OAuth2Api
+import hu.nagygm.oauth2.config.OAuth2AuthorizationServerEndpointConfiguration
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -13,10 +13,7 @@ import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter
-import org.springframework.security.web.server.util.matcher.NegatedServerWebExchangeMatcher
-import org.springframework.security.web.server.util.matcher.OrServerWebExchangeMatcher
-import org.springframework.security.web.server.util.matcher.PathPatternParserServerWebExchangeMatcher
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
+import org.springframework.security.web.server.util.matcher.*
 
 /**
  * Default security configuration for the authorization server endpoints
@@ -24,55 +21,58 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 @Configuration
 class DefaultOAuth2ServerSecurityConfiguration {
 
-    @ConditionalOnProperty(prefix = "oauth2.security.default", name = ["enabled"])
+    @Autowired lateinit var oauth2Api: OAuth2Api
+
+    @ConditionalOnProperty(prefix = "oauth2.security.default.oauth2", name = ["enabled"])
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @Bean
-    fun serverSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+    fun oauth2DefaultServerSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http
             .csrf().requireCsrfProtectionMatcher(NegatedServerWebExchangeMatcher { exchange ->
-                ServerWebExchangeMatchers.pathMatchers(
-                    "${OAuth2AuthorizationServerEndpointConfiguration.oauth2}/**", "/login**", "${OAuth2AuthorizationServerEndpointConfiguration.consentPath()}",
+                ServerWebExchangeMatchers.matchers(
+                    oauth2RequestMatcher(), oauth2ConsentRequestMatcher()
                 ).matches(exchange)
             }).and()
             .authorizeExchange()
-            .pathMatchers("${OAuth2AuthorizationServerEndpointConfiguration.authorizePath()}", "${OAuth2AuthorizationServerEndpointConfiguration.tokenPath()}", "${OAuth2AuthorizationServerEndpointConfiguration.consentPath()}", "/login", )
+            .matchers(oauth2RequestMatcher()) //TODO temp fix till more integrated spring security, until that manual auth inside the handlers
             .permitAll()
             .and().formLogin()
             .loginPage("/login")
             .authenticationSuccessHandler(redirectSuccessHandler()).and().logout()
             .and().headers().referrerPolicy()
             .policy(ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.ORIGIN_WHEN_CROSS_ORIGIN)
-
-        return http.authorizeExchange().matchers(RequestMatcherHelper.requestMatchers).authenticated().and().build()
+        return http.build()
     }
 
+
+
+    /**
+     * Needed for redirection after login
+     */
     private fun redirectSuccessHandler(): RedirectServerAuthenticationSuccessHandler {
         return RedirectServerAuthenticationSuccessHandler()
     }
 
+    @Bean("oauth2RequestMatcher")
+    fun oauth2RequestMatcher(): ServerWebExchangeMatcher {
+        val authorizationEndpointMatcher = OrServerWebExchangeMatcher(
+            PathPatternParserServerWebExchangeMatcher(oauth2Api.authorizePath(), HttpMethod.POST),
+            PathPatternParserServerWebExchangeMatcher(oauth2Api.authorizePath(), HttpMethod.GET)
+        )
+        val tokenEndpointMatcher =
+            PathPatternParserServerWebExchangeMatcher(oauth2Api.tokenPath(), HttpMethod.POST)
+        val tokenRevocationEndpointMatcher =
+            PathPatternParserServerWebExchangeMatcher(oauth2Api.revocationPath(), HttpMethod.POST)
+
+        return OrServerWebExchangeMatcher(
+            authorizationEndpointMatcher, tokenEndpointMatcher, tokenRevocationEndpointMatcher
+        )
+    }
+
+    @Bean("oauth2ConsentRequestMatcher")
+    fun oauth2ConsentRequestMatcher(): ServerWebExchangeMatcher {
+        return PathPatternParserServerWebExchangeMatcher(oauth2Api.consentPath(), HttpMethod.GET)
+    }
     
-
-}
-
-/**
- * Defines request matchers for server
- */
-object RequestMatcherHelper {
-    /**
-     * The authorization server MUST support the use of the HTTP "GET"
-     * method [RFC2616] for the authorization endpoint and MAY support the
-     * use of the "POST" method as well.
-     */
-    private val authorizationEndpointMatcher = OrServerWebExchangeMatcher(
-        PathPatternParserServerWebExchangeMatcher(OAuth2AuthorizationServerEndpointConfiguration.authorizePath(), HttpMethod.POST),
-        PathPatternParserServerWebExchangeMatcher(OAuth2AuthorizationServerEndpointConfiguration.authorizePath(), HttpMethod.GET)
-    )
-    private val tokenEndpointMatcher = PathPatternParserServerWebExchangeMatcher(OAuth2AuthorizationServerEndpointConfiguration.tokenPath(), HttpMethod.POST)
-    private val tokenRevocationEndpointMatcher =
-        PathPatternParserServerWebExchangeMatcher(OAuth2AuthorizationServerEndpointConfiguration.revocationPath(), HttpMethod.POST)
-
-    val requestMatchers = OrServerWebExchangeMatcher(
-        authorizationEndpointMatcher, tokenEndpointMatcher, tokenRevocationEndpointMatcher
-    )
 }
 

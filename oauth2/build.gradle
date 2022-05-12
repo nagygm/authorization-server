@@ -18,6 +18,7 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
     implementation 'org.springframework:spring-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     implementation 'com.nimbusds:nimbus-jose-jwt'
     implementation 'com.fasterxml.jackson.core:jackson-databind'

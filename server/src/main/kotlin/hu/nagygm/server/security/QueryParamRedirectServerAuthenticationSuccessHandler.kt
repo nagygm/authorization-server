@@ -16,20 +16,10 @@ class QueryParamRedirectServerAuthenticationSuccessHandler() : ServerAuthenticat
     private var redirectStrategy: ServerRedirectStrategy = DefaultServerRedirectStrategy()
     private var requestCache: ServerRequestCache = WebSessionServerRequestCache()
 
-    /**
-     * Creates a new instance with the specified location
-     * @param location the location to redirect if the no request is cached in
-     * [.setRequestCache]
-     */
     constructor(location: String?) : this() {
         this.location = URI.create(location)
     }
 
-    /**
-     * Sets the [ServerRequestCache] used to redirect to. Default is
-     * [WebSessionServerRequestCache].
-     * @param requestCache the cache to use
-     */
     fun setRequestCache(requestCache: ServerRequestCache) {
         Assert.notNull(requestCache, "requestCache cannot be null")
         this.requestCache = requestCache
@@ -48,19 +38,11 @@ class QueryParamRedirectServerAuthenticationSuccessHandler() : ServerAuthenticat
             }
     }
 
-    /**
-     * Where the user is redirected to upon authentication success
-     * @param location the location to redirect to. The default is "/"
-     */
     fun setLocation(location: URI) {
         Assert.notNull(location, "location cannot be null")
         this.location = location
     }
 
-    /**
-     * The RedirectStrategy to use.
-     * @param redirectStrategy the strategy to use. Default is DefaultRedirectStrategy.
-     */
     fun setRedirectStrategy(redirectStrategy: ServerRedirectStrategy) {
         Assert.notNull(redirectStrategy, "redirectStrategy cannot be null")
         this.redirectStrategy = redirectStrategy

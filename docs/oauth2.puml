@@ -1,0 +1,28 @@
+@startuml
+
+package config {
+package annotation
+package default
+}
+@enduml
+
+
+
+@startuml
+package server {
+package client
+package exception
+package security
+package validators
+package service
+}
+@enduml
+
+@startuml
+package oauth2 {
+package server
+package util
+package config
+}
+
+@enduml

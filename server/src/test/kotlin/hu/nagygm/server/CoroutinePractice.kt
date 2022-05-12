@@ -1,7 +1,5 @@
 package hu.nagygm.server
 
-import hu.nagygm.oauth2.client.registration.ClientConfigurationMap
-import hu.nagygm.oauth2.client.registration.ClientConfigurationParamKeys
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.longs.shouldBeGreaterThan

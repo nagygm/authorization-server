@@ -1,7 +1,7 @@
 package hu.nagygm.server
 
-import hu.nagygm.oauth2.client.registration.ClientConfigurationMap
-import hu.nagygm.oauth2.client.registration.ClientConfigurationParamKeys
+import hu.nagygm.oauth2.server.client.registration.ClientConfigurationMap
+import hu.nagygm.oauth2.server.client.registration.ClientConfigurationParamKeys
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.shouldBe

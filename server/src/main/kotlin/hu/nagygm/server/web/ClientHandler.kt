@@ -1,6 +1,6 @@
 package hu.nagygm.server.web
 
-import hu.nagygm.server.mangement.client.R2dbcClientDao
+import hu.nagygm.server.mangement.client.r2dbc.R2dbcClientDao
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

@@ -1,7 +1,7 @@
 package hu.nagygm.server.web
 
-import hu.nagygm.server.mangement.client.ClientProjection
-import hu.nagygm.server.mangement.client.R2dbcClientDao
+import hu.nagygm.server.mangement.client.r2dbc.ClientProjection
+import hu.nagygm.server.mangement.client.r2dbc.R2dbcClientDao
 import kotlinx.coroutines.reactive.awaitFirst
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
@@ -15,7 +15,7 @@ import java.util.*
 class RestClientController(
     @Autowired val r2dbcClientDao: R2dbcClientDao
 ) {
-    @GetMapping("T(AdminManagementEndpointConfiguration){}/clients")
+    @GetMapping("/management/v1/clients")
     suspend fun get(): Page<ClientProjection> {
         val results = r2dbcClientDao.fetchAll()
             .collectList().awaitFirst()
@@ -25,21 +25,21 @@ class RestClientController(
         )
     }
 
-    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients/{uuid}")
+    @GetMapping("/management/v1/clients/{uuid}")
     suspend fun getOne(@PathVariable uuid: UUID): ClientProjection {
         val result = r2dbcClientDao.fetchOne(uuid)
             .awaitFirst()
         return result
     }
 
-    @PostMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients")
+    @PostMapping("/management/v1/clients")
     suspend fun create(@RequestBody client: ClientProjection): ClientProjection {
         val result = r2dbcClientDao.save(client)
             .awaitFirst()
         return result
     }
 
-    @PutMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/clients/{uuid}")
+    @PutMapping("/management/v1/clients/{uuid}")
     suspend fun update(@PathVariable uuid: UUID, @RequestBody client: ClientProjection): ClientProjection {
         client.id = uuid
         val result = r2dbcClientDao.save(client)

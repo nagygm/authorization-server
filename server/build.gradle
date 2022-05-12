@@ -29,6 +29,8 @@ dependencies {
     implementation project(':oauth2')
     implementation "org.springframework.boot:spring-boot-starter-webflux"
     implementation "org.springframework.boot:spring-boot-starter-security"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-oauth2-client"
     implementation 'org.springframework.security:spring-security-oauth2-core'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
@@ -42,15 +44,11 @@ dependencies {
 
     //postgresql
     implementation "org.springframework.data:spring-data-r2dbc"
-//    :${project.ext.dep.spring_data_r2dbc}"
     implementation "io.r2dbc:r2dbc-postgresql:${project.ext.dep.r2dbc_postgresql}"
 
     flywayMigration "org.postgresql:postgresql:${project.ext.dep.postgres}"
 
     //TODO jooq needs more research for reactive
-//    implementation "org.jooq:jooq:${project.ext.dep.jooq}"
-//    implementation "org.postgresql:postgresql:${project.ext.dep.postgres}"
-//    jooqGenerator "org.postgresql:postgresql:${project.ext.dep.postgres}"
 
     testImplementation "org.springframework.data:spring-data-r2dbc"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
@@ -73,55 +71,10 @@ flyway {
     locations = ["filesystem:db_migration"]
 }
 
-//jooq {
-//    version = "${project.ext.dep.jooq}"  // the default (can be omitted)
-//    configurations {
-//        main {
-//            generationTool {
-//                jdbc {
-//                    driver = 'org.postgresql.Driver'
-//                    url = 'jdbc:postgresql://localhost:25432/authserver'
-//                    user = 'authserver'
-//                    password = 'authserver'
-//                    properties {
-//                        property {
-//                            key = 'ssl'
-//                            value = 'false'
-//                        }
-//                    }
-//                }
-//                generator {
-//                    name = 'org.jooq.codegen.DefaultGenerator'
-//                    database {
-//                        name = 'org.jooq.meta.postgres.PostgresDatabase'
-//                        inputSchema = 'public'
-//                        forcedTypes {
-//                            forcedType {
-//                                name = 'varchar'
-//                                includeExpression = '.*'
-//                                includeTypes = 'JSONB?'
-//                            }
-//                            forcedType {
-//                                name = 'varchar'
-//                                includeExpression = '.*'
-//                                includeTypes = 'INET'
-//                            }
-//                        }
-//                    }
-//                    generate {
-//                        deprecated = false
-//                        records = true
-//                        immutablePojos = true
-//                        fluentSetters = true
-//                    }
-//                    target {
-//                        packageName = 'hu.nagygm.server.generated.jooq'
-//                        directory = 'build/generated-src/jooq/main'
-//                    }
-//                    strategy.name = 'org.jooq.codegen.DefaultGeneratorStrategy'
-//                }
-//            }
-//        }
-//    }
-//}
+
+task getVersion() {
+    doLast {
+        logger.quiet "$project.version"
+    }
+}
 

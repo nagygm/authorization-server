@@ -1,56 +1,18 @@
 package hu.nagygm.server.web
 
-import hu.nagygm.oauth2.config.annotation.OAuth2AuthorizationServerEndpointConfiguration.*
-import hu.nagygm.server.consent.ConsentService
-import hu.nagygm.server.mangement.appuser.R2dbcAppUserDao
+import hu.nagygm.server.mangement.appuser.r2dbc.R2dbcAppUserDao
 import io.swagger.v3.oas.annotations.media.Schema
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactor.mono
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.*
-import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.net.URI
 import java.util.*
 
 @RestController
 class RestUserController(
-    @Autowired val consentService: ConsentService,
     @Autowired val r2dbcAppUserDao: R2dbcAppUserDao
 ) {
-    @RequestMapping(
-        method = [RequestMethod.POST],
-        path = ["#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.oauth2}/consent"],
-    )
-    @ResponseStatus(HttpStatus.FOUND)
-    suspend fun postConsent(form: ConsentFormRequest): ResponseEntity<Void> {
-        return ResponseEntity.status(HttpStatus.FOUND).header(
-            "Location",
-            mono {
-                consentService.processConsent(
-                    form.id,
-                    form.consentAccepted,
-                    form.acceptedScopes
-                ).redirectUri
-            }.map { it -> URI.create(it).toString() }.awaitFirstOrNull()
-        ).build()
-    }
-
-    @Schema(
-        description = "Consent form request",
-    )
-    data class ConsentFormRequest(
-        @Schema(description = "If the consent was accepted or not.", required = true)
-        val consentAccepted: Boolean,
-        @Schema(description = "The ID of the consent request.", required = true)
-        val id: String,
-        @Schema(description = "A partial or full set of accepted scopes from the access token request", required = true)
-        val acceptedScopes: Set<String>,
-    )
-
-    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/users")
+    @GetMapping("/management/v1/users")
     suspend fun getUsers(): Page<AppUserDto> {
         val results = r2dbcAppUserDao.fetchAllUsersWithProfile()
             .map { AppUserDto(it.userId.toString(), it.firstName, it.lastName, it.username, it.email, it.enabled) }
@@ -61,7 +23,7 @@ class RestUserController(
         )
     }
 
-    @GetMapping("#{OAuth2AuthorizationServerEndpointConfiguration.BasePathV1.management}/users/{uuid}")
+    @GetMapping("/management/v1/users/{uuid}")
     suspend fun getUser(@PathVariable uuid: UUID): AppUserDto {
         val result = r2dbcAppUserDao.fetchOneUsersWithProfile(uuid)
             .map { AppUserDto(it.userId.toString(), it.firstName,it.lastName, it.username, it.email, it.enabled) }
@@ -75,7 +37,7 @@ class RestUserController(
         val id: String,
         @Schema(description = "The users first name", required = true)
         val firstName: String,
-        @Schema(description = "The users first name", required = true)
+        @Schema(description = "The users last name", required = true)
         val lastName: String,
         @Schema(description = "The user username", required = true)
         val username: String,

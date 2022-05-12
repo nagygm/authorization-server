@@ -1,13 +1,18 @@
 package hu.nagygm.server.consent
 
-import hu.nagygm.oauth2.client.registration.ClientRegistrationRepository
-import hu.nagygm.oauth2.server.GrantRequestStates
-import hu.nagygm.oauth2.server.GrantRequest
-import hu.nagygm.oauth2.server.GrantRequestService
+import hu.nagygm.oauth2.server.client.registration.ClientRegistrationRepository
 import hu.nagygm.oauth2.server.handler.AuthorizationHandler
-import hu.nagygm.server.security.MongoAppUserRepository
+import hu.nagygm.oauth2.server.service.*
+import hu.nagygm.server.consent.mongo.GrantRequestEntity
+import hu.nagygm.server.consent.mongo.GrantRequestRepository
+import hu.nagygm.server.consent.r2dbc.GrantRequestAdapter
+import hu.nagygm.server.consent.r2dbc.GrantRequestTable
+import hu.nagygm.server.consent.r2dbc.GrantRequestR2dbcRepository
+import hu.nagygm.server.consent.r2dbc.R2dbcGrantRequestDao
+import hu.nagygm.server.mangement.appuser.r2dbc.R2dbcAppUserDao
 import hu.nagygm.server.security.UserService
 import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator
@@ -20,20 +25,20 @@ import java.util.*
 @Service
 class ConsentServiceImpl(
     @Autowired val userService: UserService,
-    @Autowired val mongoAppUserRepository: MongoAppUserRepository,
     @Autowired val grantRequestService: GrantRequestService,
-    @Autowired val clientRegistrationRepository: ClientRegistrationRepository
+    @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
+    @Autowired val r2dbcAppUserDao: R2dbcAppUserDao
 ) : ConsentService {
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96)
 
     override suspend fun createConsent(grantRequestId: String, clientId: String): ConsentPageResponse {
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
-        val appUserDetails = mongoAppUserRepository.findByUsername(user.username)
+        val appUserId = r2dbcAppUserDao.getIdByUsername(user.username).awaitFirst()
         val grantRequest = grantRequestService.getGrantRequestByIdAndClientId(grantRequestId, clientId)
             ?: throw AccessDeniedException("Access denied: can't find grant request")
         grantRequest.requestState = GrantRequestStates.ConsentRequested.code
-        grantRequest.associatedUserId = appUserDetails.id
+        grantRequest.associatedUserId = appUserId.toString()
         grantRequest.consentRequestedAt = Instant.now()
         grantRequest.processedAt = null
         grantRequestService.save(grantRequest)
@@ -44,9 +49,9 @@ class ConsentServiceImpl(
         require(grantRequestId.isNotEmpty()) { "ID can't be empty" }
         val user = userService.getCurrentUser() ?: throw AccessDeniedException("Access denied: can't find user")
         //TODO refactor checks and responses to library
-        val appUserDetails = mongoAppUserRepository.findByUsername(user.username)
+        val appUserId = r2dbcAppUserDao.getIdByUsername(user.username).awaitFirst()
 
-        val grantRequest = grantRequestService.getGrantRequestById(grantRequestId, appUserDetails.id)
+        val grantRequest = grantRequestService.getGrantRequestById(grantRequestId, appUserId.toString())
             ?: throw AccessDeniedException("Access denied: can't find grant request")
         if (!grantRequest.scopes.containsAll(acceptedScopes)) {
             val redirectUri = getRedirectUri(grantRequest)
@@ -76,24 +81,7 @@ class ConsentServiceImpl(
 
 }
 
-interface ConsentService {
-    suspend fun createConsent(grantRequestId: String, clientId: String): ConsentPageResponse
-    suspend fun processConsent(id: String, accept: Boolean, acceptedScopes: Set<String>): ConsentProcessResponse
-}
-
-data class ConsentPageResponse(
-    var id: String?,
-    val scopes: Set<String>,
-    val redirectUrl: String,
-    val clientId: String
-)
-
-data class ConsentProcessResponse(
-    val redirectUri: String
-)
-
-@Service
-class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantRequestRepository) : GrantRequestService {
+class MongoDBGrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantRequestRepository) : GrantRequestService {
     override suspend fun saveGrantRequest(request: AuthorizationHandler.AuthorizationRequest): GrantRequest {
         return grantRequestRepository.save(
             GrantRequestEntity(
@@ -132,4 +120,69 @@ class GrantRequestServiceImpl(@Autowired val grantRequestRepository: GrantReques
         return grantRequestRepository.getByIdAndAssociatedUserId(id, appUserId)
     }
 }
+
+@Service
+class GrantRequestServiceImpl(
+    @Autowired val r2dbcGrantRequestDao: R2dbcGrantRequestDao,
+    @Autowired val grantRequestR2dbcRepository: GrantRequestR2dbcRepository
+) : GrantRequestService {
+    override suspend fun saveGrantRequest(request: AuthorizationHandler.AuthorizationRequest): GrantRequest {
+        return grantRequestR2dbcRepository.save(
+            //TODO refactor
+            GrantRequestTable(
+                request.redirectUri,
+                request.scopes,
+                request.responseType,
+                request.clientId,
+                null,
+                null,
+                request.state ?: "",
+                null,
+                GrantRequestStates.Created.code,
+                emptySet(),
+                null,
+                null,
+                null,
+                request.codeChallenge,
+                request.codeChallengeMethod
+            )
+        ).map { GrantRequestAdapter(it) }.awaitFirst()
+    }
+
+    override suspend fun getGrantRequestByIdAndClientId(id: String, clientId: String): GrantRequest? {
+        return r2dbcGrantRequestDao.getByIdAndClientId(id, clientId).awaitSingleOrNull()
+    }
+
+    override suspend fun save(grantRequest: GrantRequest): GrantRequest {
+        return grantRequestR2dbcRepository.save(
+            GrantRequestTable(
+                grantRequest.redirectUri,
+                grantRequest.scopes,
+                grantRequest.responseType,
+                grantRequest.clientId,
+                UUID.fromString(grantRequest.id),
+                grantRequest.code,
+                grantRequest.state,
+                grantRequest.codeCreatedAt,
+                GrantRequestStates.Created.code,
+                grantRequest.acceptedScopes,
+                UUID.fromString(grantRequest.associatedUserId),
+                grantRequest.consentRequestedAt,
+                grantRequest.processedAt,
+                grantRequest.codeChallenge,
+                grantRequest.codeChallengeMethod
+            )
+        ).map { GrantRequestAdapter(it) }.awaitFirst()
+    }
+
+    override suspend fun getGrantRequestByCodeAndClientId(code: String, clientId: String): GrantRequest? {
+        return r2dbcGrantRequestDao.getByCodeAndAndClientId(code, clientId).awaitSingleOrNull()
+    }
+
+    override suspend fun getGrantRequestById(id: String, appUserId: String): GrantRequest? {
+        return r2dbcGrantRequestDao.getByIdAndAssociatedUserId(id, appUserId).awaitSingleOrNull()
+    }
+}
+
+
 

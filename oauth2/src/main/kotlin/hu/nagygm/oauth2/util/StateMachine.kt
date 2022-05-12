@@ -1,7 +1,7 @@
 package hu.nagygm.oauth2.util
 
 /**
- * Abstract StateMachine to describe in class fixed state small state machines
+ * Abstract StateMachine to describe in class fixed small state machines
  */
 interface StateMachine<E: Event, S: State, SE: SideEffect> {
     fun transition(from: S, event: E): State

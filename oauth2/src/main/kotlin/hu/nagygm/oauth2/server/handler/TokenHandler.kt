@@ -7,17 +7,18 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.MACSigner
 import com.nimbusds.jose.crypto.MACVerifier
-import hu.nagygm.oauth2.client.OAuth2Authorization
-import hu.nagygm.oauth2.client.OAuth2AuthorizationRepository
-import hu.nagygm.oauth2.client.registration.*
-import hu.nagygm.oauth2.server.GrantRequest
-import hu.nagygm.oauth2.server.GrantRequestService
+import hu.nagygm.oauth2.server.client.OAuth2AuthorizationFactory
+import hu.nagygm.oauth2.server.client.OAuth2AuthorizationImpl
+import hu.nagygm.oauth2.server.client.OAuth2AuthorizationRepository
+import hu.nagygm.oauth2.server.client.registration.*
+import hu.nagygm.oauth2.server.service.GrantRequest
+import hu.nagygm.oauth2.server.service.GrantRequestService
 import hu.nagygm.oauth2.server.security.pkce.CodeChallengeMethods
 import hu.nagygm.oauth2.server.security.pkce.CodeVerifier
+import hu.nagygm.oauth2.util.LoggerDelegate
 import hu.nagygm.oauth2.util.completeAndJoinChildren
 import kotlinx.coroutines.*
 import kotlinx.coroutines.reactive.awaitFirst
-import org.apache.commons.logging.LogFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -42,39 +43,44 @@ import java.util.regex.Matcher
 class TokenHandler(
     @Autowired val clientRegistrationRepository: ClientRegistrationRepository,
     @Autowired val grantRequestService: GrantRequestService,
-    @Autowired val oAuth2AuthorizationRepository: OAuth2AuthorizationRepository,
+    @Autowired val oauth2AuthorizationRepository: OAuth2AuthorizationRepository,
+    @Autowired val oAuth2AuthorizationFactory: OAuth2AuthorizationFactory,
     @Autowired @Qualifier("tokenJsonMapper") val mapper: ObjectMapper,
     @Autowired val passwordEncoder: PasswordEncoder,
     @Value("\${oauth2.jwt.secret}") var jwtSecretKey: String
 ) {
 
-    companion object {
-        private val logger = LogFactory.getLog(TokenHandler::class.java)
-    }
+    private val log by LoggerDelegate<TokenHandler>()
 
     private val codeGenerator = Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32)
 
     suspend fun acquireToken(request: ServerRequest): ServerResponse {
-        val response = validate(request)
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-            .headers { it["Cache-Control"] = "no-store"; it["Pragma"] = "no-cache" }
-            .bodyValue(response).awaitFirst()
+        val formMap = request.awaitFormData()
+        return try {
+            val credentials = extractClientAuthenticationData(request)
+            val response = processRequest(formMap, credentials)
+            ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                .headers { it["Cache-Control"] = "no-store"; it["Pragma"] = "no-cache" }
+                .bodyValue(response).awaitFirst()
+
+        } catch(ex: OAuth2AuthorizationException) {
+            respondWithError(ex.error)
+        }
     }
 
+    //TODO Implement revocation for opaque and revocable tokens
     suspend fun revokeToken(request: ServerRequest): ServerResponse = TODO("Implement revocation")
 
-    private suspend fun validate(request: ServerRequest): TokenResponse {
-        val map = request.awaitFormData()
-        val credentials = extractClientAuthenticationData(request)
-        return when (map.getFirst(OAuth2ParameterNames.GRANT_TYPE).lowercase()) {
+    private suspend fun processRequest(formMap: MultiValueMap<String,String>, credentials: ClientCredentials): TokenResponse {
+        return when (formMap.getFirst(OAuth2ParameterNames.GRANT_TYPE).lowercase()) {
             AuthorizationGrantType.AUTHORIZATION_CODE.value.lowercase() -> {
-                validateAuthorizationGrantType(formToAuthorizationCodeTokenRequest(map, credentials))
+                validateAndProcessAuthorizationGrantType(formToAuthorizationCodeTokenRequest(formMap, credentials))
             }
             AuthorizationGrantType.CLIENT_CREDENTIALS.value.lowercase() -> {
-                validateClientCredentialsGrantType(formToClientCredentialsTokenRequest(map, credentials))
+                validateAndProcessClientCredentialsGrantType(formToClientCredentialsTokenRequest(formMap, credentials))
             }
             AuthorizationGrantType.REFRESH_TOKEN.value.lowercase() -> {
-                validateRefreshTokenGrantType(formToRefreshTokenRequest(map, credentials))
+                validateAndProcessRefreshTokenGrantType(formToRefreshTokenRequest(formMap, credentials))
             }
             else -> {
                 throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_GRANT_TYPE))
@@ -82,7 +88,7 @@ class TokenHandler(
         }
     }
 
-    private suspend fun validateRefreshTokenGrantType(request: RefreshTokenRequest): TokenResponse {
+    private suspend fun validateAndProcessRefreshTokenGrantType(request: RefreshTokenRequest): TokenResponse {
         if (request.refreshToken.isNullOrBlank()) {
             throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST))
         }
@@ -100,7 +106,7 @@ class TokenHandler(
         if (!clientRegistration.authorizationGrantTypes.contains(AuthorizationGrantType.REFRESH_TOKEN)) {
             throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT))
         }
-        val authorization = oAuth2AuthorizationRepository.findByRefreshToken(oauth2RefreshToken, clientRegistration.clientId)
+        val authorization = oauth2AuthorizationRepository.findByRefreshToken(oauth2RefreshToken, clientRegistration.clientId)
             ?: throw OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.ACCESS_DENIED))
 
         val tokenResponse = generateToken(
@@ -110,11 +116,11 @@ class TokenHandler(
             authorization.principal,
             AuthorizationGrantType.REFRESH_TOKEN
         )
-        oAuth2AuthorizationRepository.remove(authorization.id, clientRegistration.clientId)
+        oauth2AuthorizationRepository.remove(authorization.id, clientRegistration.clientId)
         return tokenResponse
     }
 
-    private suspend fun validateAuthorizationGrantType(request: AuthorizationCodeTokenRequest): TokenResponse {
+    private suspend fun validateAndProcessAuthorizationGrantType(request: AuthorizationCodeTokenRequest): TokenResponse {
         if (!request.code.isNullOrBlank() && !request.clientId.isNullOrBlank()) {
             val fetchClientdataJobs = Job()
             fetchClientdataJobs.plus(Dispatchers.IO)
@@ -197,7 +203,7 @@ class TokenHandler(
         }
     }
 
-    private suspend fun validateClientCredentialsGrantType(request: ClientCredentialsTokenRequest): TokenResponse {
+    private suspend fun validateAndProcessClientCredentialsGrantType(request: ClientCredentialsTokenRequest): TokenResponse {
         if (request.clientId.isNullOrBlank() || request.clientSecret.isNullOrBlank()) {
             throw     OAuth2AuthorizationException(OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT))
         }
@@ -256,8 +262,7 @@ class TokenHandler(
             null
         }
 
-        val token = OAuth2Authorization(
-            UUID.randomUUID().toString(), //TODO move to repository
+        val token = oAuth2AuthorizationFactory.create(
             clientRegistration,
             principal,
             grantType,
@@ -265,14 +270,14 @@ class TokenHandler(
             accessToken,
             emptyMap()
         )
-        oAuth2AuthorizationRepository.save(
+        oauth2AuthorizationRepository.save(
             token
         )
         return TokenResponse(
             jwtEncoder(accessToken),
             OAuth2AccessToken.TokenType.BEARER.value,
             3600,
-            scopes.reduce { s1, s2 -> "$s1 $s2" },
+            scopes.fold("") { s1, s2 -> "$s1 $s2" },
             if (includeRefreshToken && refreshToken != null) jwtEncoder(refreshToken) else null
         )
     }

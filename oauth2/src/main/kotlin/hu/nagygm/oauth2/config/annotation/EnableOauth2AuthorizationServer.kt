@@ -1,5 +1,6 @@
 package hu.nagygm.oauth2.config.annotation
 
+import hu.nagygm.oauth2.config.OAuth2AuthorizationServerEndpointConfiguration
 import org.springframework.context.annotation.Import
 
 @Target(AnnotationTarget.CLASS)
